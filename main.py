@@ -13,12 +13,14 @@ from commands import *
 #login, password='login','password'
 # vk_session = vk_api.VkApi(login, password)
 # vk_session.auth()
-token ='API_TOKEN'
+token ='18190ed5e15e643fc50cc395008ffa023d7711e9ae395b8d33e7d54066c1317feba0ed9128140b57d7354'
 vk_session = vk_api.VkApi(token=token)
 
 session_api = vk_session.get_api()
 
 longpoll = VkLongPoll(vk_session)
+
+text_history = ["Вы и так в самом низу"]
 
 def create_keyboard(response):
     keyboard = VkKeyboard(one_time=False)
@@ -27,6 +29,42 @@ def create_keyboard(response):
     if response == 'старт':
         keyboard = start_button(keyboard)
 
+    elif response == "назад":
+        keyboard = keyboard_history[-1]
+
+    elif response == "приёмная комиссия":
+        text_history.append("старт")
+        keyboard = sc(keyboard)
+
+    elif response == "информация для абитуриентов":
+        keyboard = sc_info(keyboard)
+
+    elif response == "контакты приёмной комиссии":
+        keyboard = sc_contacts(keyboard)
+
+    elif response == 'узнать свой рейтинг':
+        history.append('старт')
+
+    elif response == 'адрес':
+    	keyboard = back(keyboard)
+
+    elif response == 'телефон':
+        keyboard = back(keyboard)
+
+    elif response == 'email':
+        keyboard = back(keyboard)
+
+    elif response == 'skype':
+        keyboard = back(keyboard)
+
+    elif response == 'телефон (для иностранных граждан)':
+        keyboard = back(keyboard)
+
+    elif response == 'адрес (для иностранных граждан)':
+        keyboard = back(keyboard)
+
+    elif response == 'Контакты приёмной комиссии':
+    	keyboard = sc_contacts(keyboard)
 
     elif response == 'информация по факультетам':
         keyboard = info_button(keyboard)
@@ -67,7 +105,6 @@ def create_keyboard(response):
         keyboard.add_line()
         keyboard.add_button('Назад', color=VkKeyboardColor.DEFAULT)
 
-
     elif response == 'привет':
         keyboard.add_button('Тест', color=VkKeyboardColor.POSITIVE)
 
@@ -78,7 +115,6 @@ def create_keyboard(response):
 
     keyboard = keyboard.get_keyboard()
     return keyboard
-
 
 def send_message(vk_session, id_type, id, message=None, attachment=None, keyboard=None):
     vk_session.method('messages.send',{id_type: id, 'message': message, 'random_id': random.randint(-2147483648, +2147483648), "attachment": attachment, 'keyboard': keyboard})
@@ -99,12 +135,47 @@ for event in longpoll.listen():
                 send_message(vk_session, 'user_id', event.user_id, message='Нажми на кнопку, чтобы получить список команд',keyboard=keyboard)
 
             elif response == "старт":
-                send_message(vk_session, 'user_id', event.user_id, message= 'Тестовые команды', keyboard=keyboard)
+                send_message(vk_session, 'user_id', event.user_id, message= 'Тестовые команды:', keyboard=keyboard)
+
+            elif response == "назад":
+                send_message(vk_session, 'user_id', event.user_id, message= text_history[-1], keyboard=keyboard)
+
+            elif response == "вопрос":
+                send_message(vk_session, 'user_id', event.user_id, message= "Зайдайте мне вопрос. Я отвечу в течение дня.", keyboard=keyboard)
+
+            elif response == "приёмная комиссия":
+                send_message(vk_session, 'user_id', event.user_id, message= 'Приёмная комиссия:', keyboard=keyboard)
+
+            elif response == "информация для абитуриентов":
+                send_message(vk_session, 'user_id', event.user_id, message= 'Информация для абитуриентов:', keyboard=keyboard)
+
+            elif response == "контакты приёмной комиссии":
+                send_message(vk_session, 'user_id', event.user_id, message= 'Контакты приёмной комиссии:', keyboard=keyboard)
+
+            elif response == "адрес":
+                send_message(vk_session, 'user_id', event.user_id, message="150000, г. Ярославль, ул.Кирова 8/10, каб. 102", keyboard=keyboard)
+                send_message(vk_session, 'user_id', event.user_id, message='Как до нас добраться:', keyboard=keyboard)
+                send_message(vk_session, 'user_id', event.user_id, message=' Проезд от вокзала «Ярославль-Главный» троллейбусом №1 до остановки «пл. Волкова» или Любым видом общественного транспорта до остановки «пл. Богоявления»', keyboard=keyboard)
+
+            elif response == "телефон":
+                send_message(vk_session, 'user_id', event.user_id, message= '+7(4852)30-32-10, 78-85-33', keyboard=keyboard)
+
+            elif response == "email":
+                send_message(vk_session, 'user_id', event.user_id, message= 'priem@uniyar.ac.ru', keyboard=keyboard)
+
+            elif response == "skype":
+                send_message(vk_session, 'user_id', event.user_id, message= 'priem_YarGU', keyboard=keyboard)
+
+            elif response == "телефон (для иностранных граждан)":
+                send_message(vk_session, 'user_id', event.user_id, message= '+7(4852)79-77-45, 79-77-46', keyboard=keyboard)
+
+            elif response == "email (для иностранных граждан)":
+                send_message(vk_session, 'user_id', event.user_id, message= 'depint@uniyar.ac.ru', keyboard=keyboard)
 
             elif response == "информация по факультетам":
                 send_message(vk_session, 'user_id', event.user_id, message= 'Факультеты:', keyboard=keyboard)
 
-            elif response == "рейтинг":
+            elif response == "Узнать свой рейтинг":
                 send_message(vk_session, 'user_id', event.user_id, message= full_info('Студент 1'))
 
             elif response == "математический":
@@ -124,6 +195,9 @@ for event in longpoll.listen():
 
             elif response == 'закрыть':
                 send_message(vk_session, 'user_id', event.user_id, message='Закрыть',keyboard=keyboard)
+
+            elif response == "Можно ли оплачивать учёбу не по семестру, а по месячно?":
+                send_message(vk_session, 'user_id', event.user_id, message= full_info('Студент 1'))
 
 
 
