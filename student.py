@@ -40,10 +40,13 @@ def info_by_index(index):
     return position
 
 def full_info(name):
-    index = find_index(name)
-    rating = info_by_index(index)
-    student = Student(name, index, rating)
-    return student.print_info()
+    try:
+        index = find_index(name)
+        rating = info_by_index(index)
+        student = Student(name, index, rating)
+        return student.print_info()
+    except:
+        return 'Имя не в списке'
 
 # print(full_info('Студент 1'))
 
