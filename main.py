@@ -1,3 +1,187 @@
+import nltk
+nltk.download('punkt')
+nltk.download('wordnet')
+nltk.download("stopwords")
+
+from nltk.stem import WordNetLemmatizer
+
+import json
+import pickle
+import os
+
+import numpy as np
+import random
+
+from keras.models import Sequential
+from keras.layers import Dense, Activation, Dropout
+from keras.optimizers import SGD
+
+from nltk.corpus import stopwords
+from pyaspeller import YandexSpeller
+
+import pymorphy2
+morph = pymorphy2.MorphAnalyzer()
+speller = YandexSpeller()
+
+
+words=[]
+classes = []
+documents = []
+ignore_words = stopwords.words("russian")
+
+data_file = open('intents.json').read()
+intents = json.loads(data_file)
+lemmatizer = WordNetLemmatizer()
+
+for intent in intents['intents']:
+    for pattern in intent['patterns']:
+
+        w = nltk.word_tokenize(pattern)
+        words.extend(w)
+        # adding documents
+        documents.append((w, intent['tag']))
+
+        # adding classes to our class list
+        if intent['tag'] not in classes:
+            classes.append(intent['tag'])
+
+
+words = [lemmatizer.lemmatize(w.lower()) for w in words if w not in ignore_words]
+words = sorted(list(set(words)))
+
+classes = sorted(list(set(classes)))
+
+# print (len(documents), "documents")
+# print (len(classes), "classes", classes)
+# print (len(words), "unique lemmatized words", words)
+
+
+pickle.dump(words,open('words.pkl','wb'))
+pickle.dump(classes,open('classes.pkl','wb'))
+
+# initializing training data
+training = []
+output_empty = [0] * len(classes)
+for doc in documents:
+    # initializing bag of words
+    bag = []
+    # list of tokenized words for the pattern
+    pattern_words = doc[0]
+    # lemmatize each word - create base word, in attempt to represent related words
+    pattern_words = [lemmatizer.lemmatize(word.lower()) for word in pattern_words]
+    # create our bag of words array with 1, if word match found in current pattern
+    for w in words:
+        bag.append(1) if w in pattern_words else bag.append(0)
+
+    # output is a '0' for each tag and '1' for current tag (for each pattern)
+    output_row = list(output_empty)
+    output_row[classes.index(doc[1])] = 1
+
+    training.append([bag, output_row])
+# shuffle our features and turn into np.array
+random.shuffle(training)
+training = np.array(training)
+# create train and test lists. X - patterns, Y - intents
+train_x = list(training[:,0])
+train_y = list(training[:,1])
+print("Training data created")
+
+# Create model - 3 layers. First layer 128 neurons, second layer 64 neurons and 3rd output layer contains number of neurons
+# equal to number of intents to predict output intent with softmax
+model = Sequential()
+model.add(Dense(128, input_shape=(len(train_x[0]),), activation='relu'))
+model.add(Dropout(0.5))
+model.add(Dense(64, activation='relu'))
+model.add(Dropout(0.5))
+model.add(Dense(len(train_y[0]), activation='softmax'))
+
+# Compile model. Stochastic gradient descent with Nesterov accelerated gradient gives good results for this model
+sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
+
+#fitting and saving the model
+hist = model.fit(np.array(train_x), np.array(train_y), epochs=200, batch_size=5, verbose=1)
+model.save('chatbot_model.h5', hist)
+
+print("model created")
+
+def clean_up_sentence(sentence):
+    sentence_words = nltk.word_tokenize(sentence)
+    sentence_words = [lemmatizer.lemmatize(word.lower()) for word in sentence_words]
+    return sentence_words
+
+# return bag of words array: 0 or 1 for each word in the bag that exists in the sentence
+
+def bow(sentence, words, show_details=True):
+    # tokenize the pattern
+    sentence_words = clean_up_sentence(sentence)
+    # bag of words - matrix of N words, vocabulary matrix
+    bag = [0]*len(words)
+    for s in sentence_words:
+        for i,w in enumerate(words):
+            if w == s:
+                # assign 1 if current word is in the vocabulary position
+                bag[i] = 1
+                if show_details:
+                    print ("found in bag: %s" % w)
+    return(np.array(bag))
+
+def predict_class(sentence, model):
+    # filter out predictions below a threshold
+    p = bow(sentence, words,show_details=False)
+    res = model.predict(np.array([p]))[0]
+    ERROR_THRESHOLD = 0.25
+    results = [[i,r] for i, r in enumerate(res) if r > ERROR_THRESHOLD]
+    # sort by strength of probability
+    results.sort(key=lambda x: x[1], reverse=True)
+    return_list = []
+    for r in results:
+        return_list.append({"intent": classes[r[0]], "probability": str(r[1])})
+    return return_list
+
+def get_response(ints, intents_json):
+    tag = ints[0]['intent']
+    list_of_intents = intents_json['intents']
+    try:
+        for i in list_of_intents:
+            if(i['tag']== tag):
+                result = ''.join(i['responses'])
+                break
+    except:
+        result = 'не понял тебя'
+    return result
+
+def chatbot_response(msg):
+    ints = predict_class(msg, model)
+    res = get_response(ints, intents)
+    return res
+
+def correct_msg(msg):
+    cur_msg = msg
+    try:
+        changes = {change['word']: change['s'][0] for change in speller.spell(msg)}
+        for word, suggestion in changes.items():
+            msg = msg.replace(word, suggestion)
+        msg = morph.parse(msg)[0].inflect({'sing', 'nomn'}).word
+    except:
+        msg = cur_msg
+        msg = cur_msg
+
+    return msg
+
+def send(response):
+    # while True:
+    msg = response
+    msg = correct_msg(msg)
+
+        # if msg.lower() == "выход!":
+           # break
+
+    res = chatbot_response(msg)
+    return res
+    # print(res)
+
+
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import sys
@@ -9,7 +193,6 @@ import vk_api
 import random
 from student import full_info
 from commands import *
-from chat_bot import chat
 
 #login, password='login','password'
 # vk_session = vk_api.VkApi(login, password)
@@ -21,391 +204,349 @@ session_api = vk_session.get_api()
 
 longpoll = VkLongPoll(vk_session)
 
+keyboard_history = []
 text_history = ["Вы и так в самом низу"]
-faculty = ["Да"]
-direction = ["Да"]
-last_word = ""
+faculty = ["Ты не выбрал факультет ау"]
+direction = ["Ты не выбрал направление ау"]
 
 def create_keyboard(response):
     keyboard = VkKeyboard(one_time=False)
+    response = response.lower()
 
-    if response == "старт":
-        lasw_word = "старт"
-        keyboard = start_button(keyboard)
+    if response == 'старт':
+        keyboard = start_button(keyboard, keyboard_history)
 
     elif response == "назад":
-        keyboard = keyboard_history[-1]
+        keyboard = return_keyboard(keyboard, keyboard_history)
 
     elif response == "приёмная комиссия":
-        text_history.append(last_word)
-        last_word = "приёмная комиссия"
-        keyboard = sc(keyboard)
+        text_history.append("старт")
+        keyboard = sc(keyboard, keyboard_history)
 
     elif response == "информация для абитуриентов":
-        text_history.append(last_word)
-        last_word = "информация для абитуриентов"
-        keyboard = level(keyboard)
+        text_history.append("старт")
+        faculty.append("информация для абитуриентов")
+        keyboard = level(keyboard, keyboard_history)
 
     elif response == "бакалавриат и специалитет":
-        text_history.append(last_word)
-        keyboard = back(keyboard)
+        text_history.append("старт")
+        keyboard = back(keyboard, keyboard_history)
 
     elif response == "магистратура":
-        text_history.append(last_word)
-        keyboard = back(keyboard)
+        text_history.append("старт")
+        keyboard = back(keyboard, keyboard_history)
 
     elif response == "аспирантура":
-        text_history.append(last_word)
-        keyboard = back(keyboard)
+        text_history.append("старт")
+        keyboard = back(keyboard, keyboard_history)
 
     elif response == "среднее профессиональное образование":
-        text_history.append(last_word)
-        keyboard = back(keyboard)
+        text_history.append("старт")
+        keyboard = back(keyboard, keyboard_history)
 
     elif response == "контакты приёмной комиссии":
-        text_history.append(last_word)
-        last_word = "контакты приёмной комиссии"
-        keyboard = sc_contacts(keyboard)
+        text_history.append("старт")
+        keyboard = sc_contacts(keyboard, keyboard_history)
 
-    elif response == "адрес":
-        text_history.append(last_word)
-        keyboard = back(keyboard)
+    elif response == 'узнать свой рейтинг':
+        text_history.append("старт")
 
-    elif response == "телефон":
-        text_history.append(last_word)
-        keyboard = back(keyboard)
+    elif response == 'адрес':
+        text_history.append("старт")
+        keyboard = back(keyboard, keyboard_history)
 
-    elif response == "email":
-        text_history.append(last_word)
-        keyboard = back(keyboard)
+    elif response == 'телефон':
+        text_history.append("старт")
+        keyboard = back(keyboard, keyboard_history)
 
-    elif response == "skype":
-        text_history.append(last_word)
-        keyboard = back(keyboard)
+    elif response == 'email':
+        text_history.append("старт")
+        keyboard = back(keyboard, keyboard_history)
 
-    elif response == "телефон (для иностранных граждан)":
-        text_history.append(last_word)
-        keyboard = back(keyboard)
+    elif response == 'skype':
+        text_history.append("старт")
+        keyboard = back(keyboard, keyboard_history)
 
-    elif response == "адрес (для иностранных граждан)":
-        text_history.append(last_word)
-        keyboard = back(keyboard)
+    elif response == 'телефон (для иностранных граждан)':
+        text_history.append("старт")
+        keyboard = back(keyboard, keyboard_history)
 
-    elif response == "информация по факультетам":
-        text_history.append(last_word)
-        last_word = "информация по факультетам"
-        keyboard = faculties(keyboard)
+    elif response == 'адрес (для иностранных граждан)':
+        text_history.append("старт")
+        keyboard = back(keyboard, keyboard_history)
+
+    elif response == 'контакты приёмной комиссии':
+        text_history.append("старт")
+        keyboard = sc_contacts(keyboard, keyboard_history)
+
+    elif response == 'информация по факультетам':
+        text_history.append("старт")
+        keyboard = faculties(keyboard, keyboard_history)
 
     elif response == "юридический":
-        text_history.append(last_word)
-        last_word = "юридический"
+        text_history.append("информация по факультетам")
         faculty.append("юридический")
-        keyboard = f_ck(keyboard)
+        keyboard = f_ck(keyboard, keyboard_history)
 
     elif response == "экономический":
-        text_history.append(last_word)
-        last_word = "экономический"
         faculty.append("экономический")
-        keyboard = f_ck(keyboard)
+        text_history.append("информация по факультетам")
+        keyboard = f_ck(keyboard, keyboard_history)
 
     elif response == "ивт":
-        text_history.append(last_word)
-        last_word = "ивт"
         faculty.append("ивт")
-        keyboard = f_ck(keyboard)
+        text_history.append("информация по факультетам")
+        keyboard = f_ck(keyboard, keyboard_history)
 
     elif response == "математический":
-        text_history.append(last_word)
-        last_word = "математический"
         faculty.append("математический")
-        keyboard = f_ck(keyboard)
+        text_history.append("информация по факультетам")
+        keyboard = f_ck(keyboard, keyboard_history)
 
     elif response == "физический":
-        text_history.append(last_word)
-        last_word = "физический"
         faculty.append("физический")
-        keyboard = f_ck(keyboard)
+        text_history.append("информация по факультетам")
+        keyboard = f_ck(keyboard, keyboard_history)
 
-    elif response == "биологическии и экологии":
-        text_history.append(last_word)
-        last_word = "биологии и экологии"
-        faculty.append("биологическии и экологии")
-        keyboard = f_ck(keyboard)
+    elif response == "биологии и экологии":
+        faculty.append("биологии и экологии")
+        text_history.append("информация по факультетам")
+        keyboard = f_ck(keyboard, keyboard_history)
 
     elif response == "психологический":
-        text_history.append(last_word)
-        last_word = "психологический"
         faculty.append("психологический")
-        keyboard = f_ck(keyboard)
+        text_history.append("информация по факультетам")
+        keyboard = f_ck(keyboard, keyboard_history)
 
-    elif response == "филологии и коммуникации":
-        text_history.append(last_word)
-        last_word = "филологии и коммуникации"
-        faculty.append("филологии и коммуникации")
-        keyboard = f_ck(keyboard)
+    elif response == "филологический":
+        faculty.append("филологический")
+        text_history.append("информация по факультетам")
+        keyboard = f_ck(keyboard, keyboard_history)
 
     elif response == "институт иностранных языков":
-        text_history.append(last_word)
-        last_word = "институт иностранных языков"
         faculty.append("институт иностранных языков")
-        keyboard = f_ck(keyboard)
+        text_history.append("информация по факультетам")
+        keyboard = f_ck(keyboard, keyboard_history)
 
     elif response == "фспн":
-        text_history.append(last_word)
-        last_word = "фспн"
         faculty.append("фспн")
-        keyboard = f_ck(keyboard)
+        text_history.append("информация по факультетам")
+        keyboard = f_ck(keyboard, keyboard_history)
+
+    elif response == "количество бюджетных мест":
+        text_history.append(direction[-1])
+        keyboard = back(keyboard, keyboard_history)
+
+    elif response == "проходной балл":
+        text_history.append(direction[-1])
+        keyboard = back(keyboard, keyboard_history)
+
+    elif response == "стоимость обучения":
+        text_history.append(direction[-1])
+        keyboard = back(keyboard, keyboard_history)
 
     elif response == "как поступить?":
-        text_history.append(last_word)
-        last_word = "как поступить?"
-        keyboard = how(keyboard)
+        text_history.append(faculty[-1])
+        keyboard = how(keyboard, keyboard_history)
 
     elif response == "выберите направление":
+        text_history.append("как поступить?")
         if faculty[-1] == "экономический":
-            text_history.append(last_word)
-            last_word = "экономический"
-            keyboard = economic_directions(keyboard)
+            keyboard = economic_directions(keyboard, keyboard_history)
         elif faculty[-1] == "юридический":
-            text_history.append(last_word)
-            last_word = "юридический"
-            keyboard = law_directions(keyboard)
+            keyboard = law_directions(keyboard, keyboard_history)
         elif faculty[-1] == "исторический":
-            text_history.append(last_word)
-            last_word = "исторический"
-            keyboard = history_directions(keyboard)
+            keyboard = history_directions(keyboard, keyboard_history)
         elif faculty[-1] == "фспн":
-            text_history.append(last_word)
-            last_word = "фспн"
-            keyboard = social_directions(keyboard)
+            keyboard = social_directions(keyboard, keyboard_history)
         elif faculty[-1] == "ивт":
-            text_history.append(last_word)
-            last_word = "ивт"
-            keyboard = it_directions(keyboard)
+            keyboard = it_directions(keyboard, keyboard_history)
         elif faculty[-1] == "математический":
-            text_history.append(last_word)
-            last_word = "математический"
-            keyboard = math_directions(keyboard)
+            keyboard = math_directions(keyboard, keyboard_history)
         elif faculty[-1] == "физический":
-            text_history.append(last_word)
-            last_word = "физический"
-            keyboard = physical_directions(keyboard)
+            keyboard = physical_directions(keyboard, keyboard_history)
         elif faculty[-1] == "биологии и экологии":
-            text_history.append(last_word)
-            last_word = "биологии и экологии"
-            keyboard = biology_directions(keyboard)
+            keyboard = biology_directions(keyboard, keyboard_history)
         elif faculty[-1] == "психологии":
-            text_history.append(last_word)
-            last_word = "психологии"
-            keyboard = psycology_directions(keyboard)
+            keyboard = psycology_directions(keyboard, keyboard_history)
         elif faculty[-1] == "филологии и коммуникации":
-            text_history.append(last_word)
-            last_word = "филологии и коммуникации"
-            keyboard = feel_f_ck_directions(keyboard)
+            keyboard = feel_f_ck_directions(keyboard, keyboard_history)
+        else:
+            keyboard = back(keyboard, keyboard_history)
 
     elif response == "прикладная математика и информатика":
-        text_history.append(last_word)
-        last_word = "прикладная математика и информатика"
+        text_history.append("выберите направления")
         direction.append("прикладная математика и информатика")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "математика и компьютерные науки":
-        text_history.append(last_word)
-        last_word = "математика и компьютерные науки"
+        text_history.append("выберите направления")
         direction.append("математика и компьютерные науки")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "информационная безопасность":
-        text_history.append(last_word)
-        last_word = "информационная безопасность"
+        text_history.append("выберите направления")
         direction.append("информационная безопасность")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "компьютерная безопасность":
-        text_history.append(last_word)
-        last_word = "компьютерная безопасность"
+        text_history.append("выберите направления")
         direction.append("компьютерная безопасность")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "прикладная математика и информатика":
-        text_history.append(last_word)
-        last_word = "прикладная математика и информатика"
+        text_history.append("выберите направления")
         direction.append("прикладная математика и информатика")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "фундаментальная информатика и информационные технологии":
-        text_history.append(last_word)
-        last_word = "фундаментальная информатика и информационные технологии"
+        text_history.append("выберите направления")
         direction.append("фундаментальная информатика и информационные технологии")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "прикладная информаиика в экономике":
-        text_history.append(last_word)
-        last_word = "прикладная информатика в экономике"
+        text_history.append("выберите направления")
         direction.append("прикладная информаиика в экономике")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "физика":
-        text_history.append(last_word)
-        last_word = "физика"
+        text_history.append("выберите направления")
         direction.append("физика")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "радиофизика":
-        text_history.append(last_word)
-        last_word = "радиофизика"
+        text_history.append("выберите направления")
         direction.append("радиофизика")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "радиотехника":
-        text_history.append(last_word)
-        last_word = "радиотехника"
+        text_history.append("выберите направления")
         direction.append("радиотехника")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "инфокоммуникационные технологии и системы связи":
-        text_history.append(last_word)
-        last_word = "инфокоммуникационные технологии и системы связи"
+        text_history.append("выберите направления")
         direction.append("инфокоммуникационные технологии и системы связи")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "электроника и наноэлектроника":
-        text_history.append(last_word)
-        last_word = "электроника и наноэлектроника"
+        text_history.append("выберите направления")
         direction.append("электроника и наноэлектроника")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "химия":
-        text_history.append(last_word)
-        last_word = "химия"
+        text_history.append("выберите направления")
         direction.append("химия")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "биология":
-        text_history.append(last_word)
-        last_word = "биология"
+        text_history.append("выберите направления")
         direction.append("биология")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "экология и природопользование":
-        text_history.append(last_word)
-        last_word = "экология и природопользование"
+        text_history.append("выберите направления")
         direction.append("экология и природопользование")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "психология":
-        text_history.append(last_word)
-        last_word = "психология"
+        text_history.append("выберите направления")
         direction.append("психология")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "экономика (бух. учёт, анализ и аудит)":
-        text_history.append(last_word)
-        last_word = "экономика (бух. учёт, анализ и аудит)"
+        text_history.append("выберите направления")
         direction.append("экономика (бух. учёт, анализ и аудит)")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "экономика (мировая экономика и международный бизнес)":
-        text_history.append(last_word)
-        last_word = "экономика (мировая экономика и международный бизнес)"
+        text_history.append("выберите направления")
         direction.append("экономика (мировая экономика и международный бизнес)")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "экономика (финансы и кредит)":
-        text_history.append(last_word)
-        last_word = "экономика (финансы и кредит)"
+        text_history.append("выберите направления")
         direction.append("экономика (финансы и кредит)")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "менеджмент":
-        text_history.append(last_word)
-        last_word = "менеджмент"
+        text_history.append("выберите направления")
         direction.append("менеджмент")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "государственное и муниципальное управление":
-        text_history.append(last_word)
-        last_word = "государственное и муниципальное управление"
+        text_history.append("выберите направления")
         direction.append("государственное и муниципальное управление")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "социология":
-        text_history.append(last_word)
-        last_word = "социология"
+        text_history.append("выберите направления")
         direction.append("социология")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "социальная работа":
-        text_history.append(last_word)
-        last_word = "социальная работа"
+        text_history.append("выберите направления")
         direction.append("социальная работа")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "социальная работа (заочная)":
-        text_history.append(last_word)
-        last_word = "социальная работа (заочная)"
+        text_history.append("выберите направления")
         direction.append("социальная работа (заочная)")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "организация работы с молодёжью":
-        text_history.append(last_word)
-        last_word = "организация работы с молодёжью"
+        text_history.append("выберите направления")
         direction.append("организация работы с молодёжью")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "организация работы с молодёжью (заочная)":
-        text_history.append(last_word)
-        last_word = "организация работы с молодёжью (заочная)"
+        text_history.append("выберите направления")
         direction.append("организация работы с молодёжью (заочная)")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "политология":
-        text_history.append(last_word)
-        last_word = "политология"
+        text_history.append("выберите направления")
         direction.append("политология")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "публичная политика и социальные науки":
-        text_history.append(last_word)
-        last_word = "публичная политика и социальные науки"
+        text_history.append("выберите направления")
         direction.append("публичная политика и социальные науки")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "юриспруденция":
-        text_history.append(last_word)
-        last_word = "юриспруденция"
+        text_history.append("выберите направления")
         direction.append("юриспруденция")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "юриспруденция (очно-заочная)":
-        text_history.append(last_word)
-        last_word = "юриспруденция (очно-заочная)"
+        text_history.append("выберите направления")
         direction.append("юриспруденция (очно-заочная)")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "прикладная филология":
-        text_history.append(last_word)
-        last_word = "прикладная филология"
+        text_history.append("выберите направления")
         direction.append("прикладная филология")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "зарубежная филология":
-        text_history.append(last_word)
-        last_word = "зарубежная филология"
+        text_history.append("выберите направления")
         direction.append("зарубежная филология")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "реклама и связи с общественностью":
-        text_history.append(last_word)
-        last_word = "реклама и связи с общественностью"
+        text_history.append("выберите направления")
         direction.append("реклама и связи с общественностью")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "туризм":
-        text_history.append(last_word)
-        last_word = "туризм"
+        text_history.append("выберите направления")
         direction.append("туризм")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
     elif response == "история":
-        text_history.append(last_word)
-        last_word = "история"
+        text_history.append("выберите направления")
         direction.append("история")
-        keyboard = direction_menu(keyboard)
+        keyboard = direction_menu(keyboard, keyboard_history)
 
-    elif response == "количество бюджетных мест" or response == "проходной балл" or response == "стоимость обучения":
-        text_history.append(last_word)
-        keyboard = back(keyboard)
+    elif response == "способы подачи документов":
+        text_history.append("как поступить?")
+        keyboard = variants(keyboard, keyboard_history)
 
-    elif response == "способы подачи":
-        text_history.append(last_word)
-        last_word = "способы подачи"
-        keyboard = how(keyboard)
-
-    elif response == "лично" or response == "в электронной форме" or response == "по почте":
-        text_history.append(last_word)
-        keyboard = back(keyboard)
-
-    elif response == "задайте вопрос":
-        text_history.append(last_word)
-        keyboard = back(keyboard)
+    elif response == "лично":
+        keyboard = back(keyboard, keyboard_history)
 
     elif response == "где трудиться?":
-        keyboard = back(keyboard)
+        text_history.append(faculty[-1])
+        keyboard = back(keyboard, keyboard_history)
+
+    elif response == "в электронной форме":
+        keyboard = back(keyboard, keyboard_history)
+
+    elif response == "по почте":
+        keyboard = back(keyboard, keyboard_history)
+
+    elif response == "контакты факультета":
+        keyboard = back(keyboard, keyboard_history)
+
+    elif response == "направления":
+        text_history.append(faculty[-1])
+        keyboard = level(keyboard, keyboard_history)
 
     elif response == 'привет':
         keyboard.add_button('Тест', color=VkKeyboardColor.POSITIVE)
 
     elif response == 'закрыть':
+        #print('закрываем клаву')
         return keyboard.get_empty_keyboard()
 
-    print(faculty)
+    # print(faculty)
 
     keyboard = keyboard.get_keyboard()
     return keyboard
@@ -421,8 +562,6 @@ for event in longpoll.listen():
         response = event.text.lower()
         keyboard = create_keyboard(response)
 
-        send(response)
-
         if event.from_user and not event.from_me:
             # if response == "котики":
             #     attachment = get_pictures.get(vk_session, -130670107, session_api)
@@ -430,11 +569,11 @@ for event in longpoll.listen():
             if response == "привет":
                 send_message(vk_session, 'user_id', event.user_id, message='Нажми на кнопку, чтобы получить список команд',keyboard=keyboard)
 
+            elif response == "назад":
+                send_message(vk_session, 'user_id', event.user_id, message= text_history[-1], keyboard=keyboard)
+
             elif response == "старт":
                 send_message(vk_session, 'user_id', event.user_id, message= 'Тестовые команды:', keyboard=keyboard)
-
-            elif response == "чат":
-                send_message(vk_session, 'user_id', event.user_id, message= 'Задайте вопрос боту: ', keyboard=keyboard)
 
             elif response == "бакалавриат и специалитет":
                 if faculty == "информация для абитуриентов":
@@ -556,7 +695,7 @@ for event in longpoll.listen():
                     send_message(vk_session, 'user_id', event.user_id, message= 'Социальная работа', keyboard=keyboard)
                     send_message(vk_session, 'user_id', event.user_id, message= 'Организация работы с молодежью', keyboard=keyboard)
                     send_message(vk_session, 'user_id', event.user_id, message= 'Политология', keyboard=keyboard)
-                elif faculty == "ИВТ":
+                elif faculty == "ивт":
                     send_message(vk_session, 'user_id', event.user_id, message= 'Прикладная математика и информатика', keyboard=keyboard)
                     send_message(vk_session, 'user_id', event.user_id, message= 'Фундаментальная информатика и информационные технологии', keyboard=keyboard)
                     send_message(vk_session, 'user_id', event.user_id, message= 'Прикладная информатика', keyboard=keyboard)
@@ -575,7 +714,18 @@ for event in longpoll.listen():
                     send_message(vk_session, 'user_id', event.user_id, message= "Химия", keyboard=keyboard)
                     send_message(vk_session, 'user_id', event.user_id, message= "Экология и природопользование", keyboard=keyboard)
                 elif faculty == "психологии":
-                    send_message(vk_session, 'user_id', event.user_id, message= "Психология", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "Основными направлениями научной работы на факультете являются:", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "   Метакогнитивная психология деятельности", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "   Психология практического мышления и опыта", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "   Психология творческого профессионального мышления ", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "   Социально-психологические закономерности функционирования коллективного субъекта профессиональной деятельности", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "   Методология, теория и практика профессиональной деятельности психолога-консультанта", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "   Интегративная психология", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "   Психология вузовской адаптации", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "   Спортивная психология", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "   Социальное познание в международных отношениях на примере коллективного субъекта (государства)", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "   Организационная психология", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "   Когнитивная психология и нейронаука", keyboard=keyboard)
                 elif faculty == "филологии и коммуникации":
                     send_message(vk_session, 'user_id', event.user_id, message= "Филологическое обеспечение массовой коммуникации", keyboard=keyboard)
                     send_message(vk_session, 'user_id', event.user_id, message= "Филология и коммуникация: теоретический и прикладной аспект", keyboard=keyboard)
@@ -606,13 +756,17 @@ for event in longpoll.listen():
                 elif faculty == "фспн":
                     send_message(vk_session, 'user_id', event.user_id, message= 'Социальная структура, социальные институты и процессы', keyboard=keyboard)
                     send_message(vk_session, 'user_id', event.user_id, message= 'Политические институты, процессы и технологии', keyboard=keyboard)
-                elif faculty == "ИВТ":
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Математика и механика\nКомпьютерные и информационные науки\nИнформатика и вычислительная техника', keyboard=keyboard)
+                elif faculty == "ивт":
+                    send_message(vk_session, 'user_id', event.user_id, message= 'Математика и механика', keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= 'Компьютерные и информационные науки', keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= 'Информатика и вычислительная техника', keyboard=keyboard)
                 elif faculty == "математический":
-                    send_message(vk_session, 'user_id', event.user_id, message= "Математика и компьютерные науки\nПрикладная математика и информатика\n", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "Математика и компьютерные науки", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "Прикладная математика и информатика", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "Информационная безопасность", keyboard=keyboard)
                 elif faculty == "физический":
-                    send_message(vk_session, 'user_id', event.user_id, message= "Физика и астрономия\nЭлектроника, радиотехника и системы связи ", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "Физика и астрономия", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "Электроника, радиотехника и системы связи ", keyboard=keyboard)
                 elif faculty == "биологии и экологии":
                     send_message(vk_session, 'user_id', event.user_id, message= "Микробиология", keyboard=keyboard)
                     send_message(vk_session, 'user_id', event.user_id, message= "Физиология", keyboard=keyboard)
@@ -651,7 +805,7 @@ for event in longpoll.listen():
                 send_message(vk_session, 'user_id', event.user_id, message= "Форма проведения вступительных испытаний", keyboard=keyboard)
 
             elif response == "прикладная математика и информатика":
-                send_message(vk_session, 'user_id', event.user_id, message= "прикладная математика и информатика", keyboard=keyboard)
+                send_message(vk_session, 'user_id', event.user_id, message= "прикладная математика и информатикад", keyboard=keyboard)
             elif response == "математика и компьютерные науки":
                 send_message(vk_session, 'user_id', event.user_id, message= "математика и компьютерные науки", keyboard=keyboard)
             elif response == "информационная безопасность":
@@ -722,276 +876,229 @@ for event in longpoll.listen():
                 send_message(vk_session, 'user_id', event.user_id, message= "история", keyboard=keyboard)
 
             elif response == "количество бюджетных мест":
-                if faculty[-1] == "математический":
-                    if direction[-1] == "прикладная математика и информатика":
-                        send_message(vk_session, 'user_id', event.user_id, message= "50", keyboard=keyboard)
-                    elif direction[-1] == "математика и компьютерные науки":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "информационная безопасность":
-                        send_message(vk_session, 'user_id', event.user_id, message= "20", keyboard=keyboard)
-                    elif direction[-1] == "компьютерная безопасность":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                elif faculty[-1] == "информатики и вычислительной техники":
-                    if direction[-1] == "прикладная математика и информатика":
-                        send_message(vk_session, 'user_id', event.user_id, message= "50", keyboard=keyboard)
-                    elif direction[-1] == "фундаментальная информатика и информационные технологии":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "прикладная информаиика в экономике":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                elif faculty[-1] == "физический":
-                    if direction[-1] == "физика":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "радиофизика":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "радиотехника":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "инфокоммуникационные технологии и системы связи":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "электроника и наноэлектроника":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                elif faculty[-1] == "биологический":
-                    if direction[-1] == "химия":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "биология":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "экология и природопользование":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                elif faculty[-1] == "психологический":
-                    if direction[-1] == "психология":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                elif faculty[-1] == "экономический":
-                    if direction[-1] == "экономика (бух. учёт, анализ и аудит)":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "экономика (мировая экономика и международный бизнес)":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "экономика (финансы и кредит)":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "менеджмент":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "государственное и муниципальное управление":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                elif faculty[-1] == "фспн":
-                    if direction[-1] == "социология":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "социальная работа":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "социальная работа (заочная)":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "организация работы с молодёжью":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "организация работы с молодёжью (заочная)":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "политология":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "публичная политика и социальные науки":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                elif faculty[-1] == "юридический":
-                    if direction[-1] == "юриспруденция":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "юриспруденция (очно-заочная)":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "прикладная филология":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "зарубежная филология":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-
-                elif faculty[-1] == "исторический":
-                    if direction[-1] == "реклама и связи с общественностью":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "туризм":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "история":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
+                if faculty[-1] == "математический" and direction[-1] == "прикладная математика и информатика":
+                    send_message(vk_session, 'user_id', event.user_id, message= "50", keyboard=keyboard)
+                elif direction[-1] == "математика и компьютерные науки":
+                    send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
+                elif direction[-1] == "информационная безопасность":
+                    send_message(vk_session, 'user_id', event.user_id, message= "20", keyboard=keyboard)
+                elif direction[-1] == "компьютерная безопасность":
+                    send_message(vk_session, 'user_id', event.user_id, message= "29", keyboard=keyboard)
+                elif faculty[-1] == "ивт" and direction[-1] == "прикладная математика и информатика":
+                    send_message(vk_session, 'user_id', event.user_id, message= "50", keyboard=keyboard)
+                elif direction[-1] == "фундаментальная информатика и информационные технологии":
+                    send_message(vk_session, 'user_id', event.user_id, message= "45", keyboard=keyboard)
+                elif direction[-1] == "прикладная информаиика в экономике":
+                    send_message(vk_session, 'user_id', event.user_id, message= "20", keyboard=keyboard)
+                elif direction[-1] == "физика":
+                    send_message(vk_session, 'user_id', event.user_id, message= "14", keyboard=keyboard)
+                elif direction[-1] == "радиофизика":
+                    send_message(vk_session, 'user_id', event.user_id, message= "20", keyboard=keyboard)
+                elif direction[-1] == "радиотехника":
+                    send_message(vk_session, 'user_id', event.user_id, message= "18", keyboard=keyboard)
+                elif direction[-1] == "инфокоммуникационные технологии и системы связи":
+                    send_message(vk_session, 'user_id', event.user_id, message= "30", keyboard=keyboard)
+                elif direction[-1] == "электроника и наноэлектроника":
+                    send_message(vk_session, 'user_id', event.user_id, message= "30", keyboard=keyboard)
+                elif direction[-1] == "химия":
+                    send_message(vk_session, 'user_id', event.user_id, message= "30", keyboard=keyboard)
+                elif direction[-1] == "биология":
+                    send_message(vk_session, 'user_id', event.user_id, message= "50", keyboard=keyboard)
+                elif direction[-1] == "экология и природопользование":
+                    send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
+                elif direction[-1] == "психология":
+                    send_message(vk_session, 'user_id', event.user_id, message= "24", keyboard=keyboard)
+                elif direction[-1] == "экономика (бух. учёт, анализ и аудит)":
+                    send_message(vk_session, 'user_id', event.user_id, message= "7", keyboard=keyboard)
+                elif direction[-1] == "экономика (мировая экономика и международный бизнес)":
+                    send_message(vk_session, 'user_id', event.user_id, message= "7", keyboard=keyboard)
+                elif direction[-1] == "экономика (финансы и кредит)":
+                    send_message(vk_session, 'user_id', event.user_id, message= "7", keyboard=keyboard)
+                elif direction[-1] == "менеджмент":
+                    send_message(vk_session, 'user_id', event.user_id, message= "7", keyboard=keyboard)
+                elif direction[-1] == "государственное и муниципальное управление":
+                    send_message(vk_session, 'user_id', event.user_id, message= "7", keyboard=keyboard)
+                elif direction[-1] == "социология":
+                    send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
+                elif direction[-1] == "социальная работа":
+                    send_message(vk_session, 'user_id', event.user_id, message= "14", keyboard=keyboard)
+                elif direction[-1] == "социальная работа (заочная)":
+                    send_message(vk_session, 'user_id', event.user_id, message= "9", keyboard=keyboard)
+                elif direction[-1] == "организация работы с молодёжью":
+                    send_message(vk_session, 'user_id', event.user_id, message= "14", keyboard=keyboard)
+                elif direction[-1] == "организация работы с молодёжью (заочная)":
+                    send_message(vk_session, 'user_id', event.user_id, message= "9", keyboard=keyboard)
+                elif direction[-1] == "политология":
+                    send_message(vk_session, 'user_id', event.user_id, message= "10", keyboard=keyboard)
+                elif direction[-1] == "публичная политика и социальные науки":
+                    send_message(vk_session, 'user_id', event.user_id, message= "7", keyboard=keyboard)
+                elif direction[-1] == "юриспруденция":
+                    send_message(vk_session, 'user_id', event.user_id, message= "28", keyboard=keyboard)
+                elif direction[-1] == "юриспруденция (очно-заочная)":
+                    send_message(vk_session, 'user_id', event.user_id, message= "29", keyboard=keyboard)
+                elif direction[-1] == "прикладная филология":
+                    send_message(vk_session, 'user_id', event.user_id, message= "8", keyboard=keyboard)
+                elif direction[-1] == "зарубежная филология":
+                    send_message(vk_session, 'user_id', event.user_id, message= "7", keyboard=keyboard)
+                elif direction[-1] == "реклама и связи с общественностью":
+                    send_message(vk_session, 'user_id', event.user_id, message= "-", keyboard=keyboard)
+                elif direction[-1] == "туризм":
+                    send_message(vk_session, 'user_id', event.user_id, message= "21", keyboard=keyboard)
+                elif direction[-1] == "история":
+                    send_message(vk_session, 'user_id', event.user_id, message= "27", keyboard=keyboard)
 
             elif response == "проходной балл":
-                if faculty[-1] == "математический":
-                    if direction[-1] == "прикладная математика и информатика":
-                        send_message(vk_session, 'user_id', event.user_id, message= "50", keyboard=keyboard)
-                    elif direction[-1] == "математика и компьютерные науки":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "информационная безопасность":
-                        send_message(vk_session, 'user_id', event.user_id, message= "20", keyboard=keyboard)
-                    elif direction[-1] == "компьютерная безопасность":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-
-                elif faculty[-1] == "информатики и вычислительной техники":
-                    if direction[-1] == "прикладная математика и информатика":
-                        send_message(vk_session, 'user_id', event.user_id, message= "50", keyboard=keyboard)
-                    elif direction[-1] == "фундаментальная информатика и информационные технологии":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "прикладная информаиика в экономике":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-
-                elif faculty[-1] == "физический":
-                    if direction[-1] == "физика":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "радиофизика":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "радиотехника":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "инфокоммуникационные технологии и системы связи":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "электроника и наноэлектроника":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-
-                elif faculty[-1] == "биологический":
-                    if direction[-1] == "химия":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "биология":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "экология и природопользование":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-
-                elif faculty[-1] == "психологический":
-                    if direction[-1] == "психология":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-
-                elif faculty[-1] == "экономический":
-                    if direction[-1] == "экономика (бух. учёт, анализ и аудит)":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "экономика (мировая экономика и международный бизнес)":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "экономика (финансы и кредит)":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "менеджмент":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "государственное и муниципальное управление":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-
-                elif faculty[-1] == "фспн":
-                    if direction[-1] == "социология":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "социальная работа":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "социальная работа (заочная)":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "организация работы с молодёжью":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "организация работы с молодёжью (заочная)":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "политология":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "публичная политика и социальные науки":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-
-                elif faculty[-1] == "юридический":
-                    if direction[-1] == "юриспруденция":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "юриспруденция (очно-заочная)":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "прикладная филология":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "зарубежная филология":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-
-                elif faculty[-1] == "исторический":
-                    if direction[-1] == "реклама и связи с общественностью":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "туризм":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "история":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
+                if faculty[-1] == "математический" and direction[-1] == "прикладная математика и информатика":
+                    send_message(vk_session, 'user_id', event.user_id, message= "219", keyboard=keyboard)
+                elif direction[-1] == "математика и компьютерные науки":
+                    send_message(vk_session, 'user_id', event.user_id, message= "212", keyboard=keyboard)
+                elif direction[-1] == "информационная безопасность":
+                    send_message(vk_session, 'user_id', event.user_id, message= "226", keyboard=keyboard)
+                elif direction[-1] == "компьютерная безопасность":
+                    send_message(vk_session, 'user_id', event.user_id, message= "230", keyboard=keyboard)
+                elif faculty[-1] == "ивт" and direction[-1] == "прикладная математика и информатика":
+                    send_message(vk_session, 'user_id', event.user_id, message= "231", keyboard=keyboard)
+                elif direction[-1] == "фундаментальная информатика и информационные технологии":
+                    send_message(vk_session, 'user_id', event.user_id, message= "233", keyboard=keyboard)
+                elif direction[-1] == "прикладная информаиика в экономике":
+                    send_message(vk_session, 'user_id', event.user_id, message= "230", keyboard=keyboard)
+                elif direction[-1] == "физика":
+                    send_message(vk_session, 'user_id', event.user_id, message= "179", keyboard=keyboard)
+                elif direction[-1] == "радиофизика":
+                    send_message(vk_session, 'user_id', event.user_id, message= "183", keyboard=keyboard)
+                elif direction[-1] == "радиотехника":
+                    send_message(vk_session, 'user_id', event.user_id, message= "181", keyboard=keyboard)
+                elif direction[-1] == "инфокоммуникационные технологии и системы связи":
+                    send_message(vk_session, 'user_id', event.user_id, message= "176", keyboard=keyboard)
+                elif direction[-1] == "электроника и наноэлектроника":
+                    send_message(vk_session, 'user_id', event.user_id, message= "187", keyboard=keyboard)
+                elif direction[-1] == "химия":
+                    send_message(vk_session, 'user_id', event.user_id, message= "202", keyboard=keyboard)
+                elif direction[-1] == "биология":
+                    send_message(vk_session, 'user_id', event.user_id, message= "198", keyboard=keyboard)
+                elif direction[-1] == "экология и природопользование":
+                    send_message(vk_session, 'user_id', event.user_id, message= "183", keyboard=keyboard)
+                elif direction[-1] == "психология":
+                    send_message(vk_session, 'user_id', event.user_id, message= "211", keyboard=keyboard)
+                elif direction[-1] == "экономика (бух. учёт, анализ и аудит)":
+                    send_message(vk_session, 'user_id', event.user_id, message= "240", keyboard=keyboard)
+                elif direction[-1] == "экономика (мировая экономика и международный бизнес)":
+                    send_message(vk_session, 'user_id', event.user_id, message= "240", keyboard=keyboard)
+                elif direction[-1] == "экономика (финансы и кредит)":
+                    send_message(vk_session, 'user_id', event.user_id, message= "240", keyboard=keyboard)
+                elif direction[-1] == "менеджмент":
+                    send_message(vk_session, 'user_id', event.user_id, message= "243", keyboard=keyboard)
+                elif direction[-1] == "государственное и муниципальное управление":
+                    send_message(vk_session, 'user_id', event.user_id, message= "240", keyboard=keyboard)
+                elif direction[-1] == "социология":
+                    send_message(vk_session, 'user_id', event.user_id, message= "227", keyboard=keyboard)
+                elif direction[-1] == "социальная работа":
+                    send_message(vk_session, 'user_id', event.user_id, message= "202", keyboard=keyboard)
+                elif direction[-1] == "социальная работа (заочная)":
+                    send_message(vk_session, 'user_id', event.user_id, message= "177", keyboard=keyboard)
+                elif direction[-1] == "организация работы с молодёжью":
+                    send_message(vk_session, 'user_id', event.user_id, message= "202", keyboard=keyboard)
+                elif direction[-1] == "организация работы с молодёжью (заочная)":
+                    send_message(vk_session, 'user_id', event.user_id, message= "184", keyboard=keyboard)
+                elif direction[-1] == "политология":
+                    send_message(vk_session, 'user_id', event.user_id, message= "210", keyboard=keyboard)
+                elif direction[-1] == "публичная политика и социальные науки":
+                    send_message(vk_session, 'user_id', event.user_id, message= "218", keyboard=keyboard)
+                elif direction[-1] == "юриспруденция":
+                    send_message(vk_session, 'user_id', event.user_id, message= "250", keyboard=keyboard)
+                elif direction[-1] == "юриспруденция (очно-заочная)":
+                    send_message(vk_session, 'user_id', event.user_id, message= "203", keyboard=keyboard)
+                elif direction[-1] == "прикладная филология":
+                    send_message(vk_session, 'user_id', event.user_id, message= "232", keyboard=keyboard)
+                elif direction[-1] == "зарубежная филология":
+                    send_message(vk_session, 'user_id', event.user_id, message= "261", keyboard=keyboard)
+                elif direction[-1] == "реклама и связи с общественностью":
+                    send_message(vk_session, 'user_id', event.user_id, message= "-", keyboard=keyboard)
+                elif direction[-1] == "туризм":
+                    send_message(vk_session, 'user_id', event.user_id, message= "222", keyboard=keyboard)
+                elif direction[-1] == "история":
+                    send_message(vk_session, 'user_id', event.user_id, message= "225", keyboard=keyboard)
 
             elif response == "стоимость обучения":
-                if faculty[-1] == "математический":
-                    if direction[-1] == "прикладная математика и информатика":
-                        send_message(vk_session, 'user_id', event.user_id, message= "50", keyboard=keyboard)
-                    elif direction[-1] == "математика и компьютерные науки":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "информационная безопасность":
-                        send_message(vk_session, 'user_id', event.user_id, message= "20", keyboard=keyboard)
-                    elif direction[-1] == "компьютерная безопасность":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
+                if faculty[-1] == "математический" and direction[-1] == "прикладная математика и информатика":
+                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
+                elif direction[-1] == "математика и компьютерные науки":
+                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
+                elif direction[-1] == "информационная безопасность":
+                    send_message(vk_session, 'user_id', event.user_id, message= "132802", keyboard=keyboard)
+                elif direction[-1] == "компьютерная безопасность":
+                    send_message(vk_session, 'user_id', event.user_id, message= "-", keyboard=keyboard)
+                elif faculty[-1] == "ивт" and direction[-1] == "прикладная математика и информатика":
+                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
+                elif direction[-1] == "фундаментальная информатика и информационные технологии":
+                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
+                elif direction[-1] == "прикладная информаиика в экономике":
+                    send_message(vk_session, 'user_id', event.user_id, message= "132802", keyboard=keyboard)
+                elif direction[-1] == "физика":
+                    send_message(vk_session, 'user_id', event.user_id, message= "132802", keyboard=keyboard)
+                elif direction[-1] == "радиофизика":
+                    send_message(vk_session, 'user_id', event.user_id, message= "132802", keyboard=keyboard)
+                elif direction[-1] == "радиотехника":
+                    send_message(vk_session, 'user_id', event.user_id, message= "132802", keyboard=keyboard)
+                elif direction[-1] == "инфокоммуникационные технологии и системы связи":
+                    send_message(vk_session, 'user_id', event.user_id, message= "132802 (оч.) / 62181 (заоч.)", keyboard=keyboard)
+                elif direction[-1] == "электроника и наноэлектроника":
+                    send_message(vk_session, 'user_id', event.user_id, message= "132802", keyboard=keyboard)
+                elif direction[-1] == "химия":
+                    send_message(vk_session, 'user_id', event.user_id, message= "132802", keyboard=keyboard)
+                elif direction[-1] == "биология":
+                    send_message(vk_session, 'user_id', event.user_id, message= "132802", keyboard=keyboard)
+                elif direction[-1] == "экология и природопользование":
+                    send_message(vk_session, 'user_id', event.user_id, message= "132802", keyboard=keyboard)
+                elif direction[-1] == "психология":
+                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
+                elif direction[-1] == "экономика (бух. учёт, анализ и аудит)":
+                    send_message(vk_session, 'user_id', event.user_id, message= "128097 (оч.) / 58097 (заоч.)", keyboard=keyboard)
+                elif direction[-1] == "экономика (мировая экономика и международный бизнес)":
+                    send_message(vk_session, 'user_id', event.user_id, message= "128097", keyboard=keyboard)
+                elif direction[-1] == "экономика (финансы и кредит)":
+                    send_message(vk_session, 'user_id', event.user_id, message= "128097", keyboard=keyboard)
+                elif direction[-1] == "менеджмент":
+                    send_message(vk_session, 'user_id', event.user_id, message= "128097 (оч.) / 58097 (заоч.)", keyboard=keyboard)
+                elif direction[-1] == "государственное и муниципальное управление":
+                    send_message(vk_session, 'user_id', event.user_id, message= "128097 (оч.) / 58097 (заоч.)", keyboard=keyboard)
+                elif direction[-1] == "социология":
+                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
+                elif direction[-1] == "социальная работа":
+                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
+                elif direction[-1] == "социальная работа (заочная)":
+                    send_message(vk_session, 'user_id', event.user_id, message= "49749", keyboard=keyboard)
+                elif direction[-1] == "организация работы с молодёжью":
+                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
+                elif direction[-1] == "организация работы с молодёжью (заочная)":
+                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
+                elif direction[-1] == "политология":
+                    send_message(vk_session, 'user_id', event.user_id, message= "120628", keyboard=keyboard)
+                elif direction[-1] == "публичная политика и социальные науки":
+                    send_message(vk_session, 'user_id', event.user_id, message= "73327", keyboard=keyboard)
+                elif direction[-1] == "юриспруденция":
+                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
+                elif direction[-1] == "юриспруденция (очно-заочная)":
+                    send_message(vk_session, 'user_id', event.user_id   , message= "114738", keyboard=keyboard)
+                elif direction[-1] == "прикладная филология":
+                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
+                elif direction[-1] == "зарубежная филология":
+                    send_message(vk_session, 'user_id', event.user_id, message= "114738 (оч.) / 55164 (заоч.)", keyboard=keyboard)
+                elif direction[-1] == "реклама и связи с общественностью":
+                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
+                elif direction[-1] == "туризм":
+                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
+                elif direction[-1] == "история":
+                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
 
-                elif faculty[-1] == "информатики и вычислительной техники":
-                    if direction[-1] == "прикладная математика и информатика":
-                        send_message(vk_session, 'user_id', event.user_id, message= "50", keyboard=keyboard)
-                    elif direction[-1] == "фундаментальная информатика и информационные технологии":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "прикладная информаиика в экономике":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-
-                elif faculty[-1] == "физический":
-                    if direction[-1] == "физика":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "радиофизика":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "радиотехника":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "инфокоммуникационные технологии и системы связи":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "электроника и наноэлектроника":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-
-                elif faculty[-1] == "биологический":
-                    if direction[-1] == "химия":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "биология":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "экология и природопользование":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-
-                elif faculty[-1] == "психологический":
-                    if direction[-1] == "психология":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-
-                elif faculty[-1] == "экономический":
-                    if direction[-1] == "экономика (бух. учёт, анализ и аудит)":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "экономика (мировая экономика и международный бизнес)":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "экономика (финансы и кредит)":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "менеджмент":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "государственное и муниципальное управление":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-
-                elif faculty[-1] == "фспн":
-                    if direction[-1] == "социология":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "социальная работа":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "социальная работа (заочная)":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "организация работы с молодёжью":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "организация работы с молодёжью (заочная)":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "политология":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "публичная политика и социальные науки":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-
-                elif faculty[-1] == "юридический":
-                    if direction[-1] == "юриспруденция":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "юриспруденция (очно-заочная)":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "прикладная филология":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "зарубежная филология":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-
-                elif faculty[-1] == "исторический":
-                    if direction[-1] == "реклама и связи с общественностью":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "туризм":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                    elif direction[-1] == "история":
-                        send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-
-            elif response == "назад":
-                send_message(vk_session, 'user_id', event.user_id, message= text_history[-1], keyboard=keyboard)
-
-            elif response == "способы подачи":
-                send_message(vk_session, 'user_id', event.user_id, message= "Способы подачи:", keyboard=keyboard)
+            elif response == "способы подачи документов":
+                send_message(vk_session, 'user_id', event.user_id, message= "Способы подачи документов", keyboard=keyboard)
 
             elif response == "лично":
-                send_message(vk_session, 'user_id', event.user_id, message= "Приёмная комиссия работает по адресу: Ярославль, ул. Кирова, д. 8/10", keyboard=keyboard)
-                send_message(vk_session, 'user_id', event.user_id, message= " с понедельника по пятницу с 9:00 до 16:00", keyboard=keyboard)
-                send_message(vk_session, 'user_id', event.user_id, message= " в субботу - с 10:00 до 13:00 (воскресенье - выходной день)", keyboard=keyboard)
-                send_message(vk_session, 'user_id', event.user_id, message= "Телефоны приёмной комиссии: (4852) 30-32-10б 31-43-73", keyboard=keyboard)
+                send_message(vk_session, 'user_id', event.user_id, message= "Приемная комиссия работает по адресу: Ярославль, ул. Кирова, д. 8/10.", keyboard=keyboard)
+                send_message(vk_session, 'user_id', event.user_id, message= "   с понедельника по пятницу с 9.00 до 16.00,", keyboard=keyboard)
+                send_message(vk_session, 'user_id', event.user_id, message= "   в субботу — с 10.00 до 13.00 (воскресенье — выходной день).", keyboard=keyboard)
+                send_message(vk_session, 'user_id', event.user_id, message= "Телефоны приемной комиссии: (4852) 30-32-10, 31-43-73.", keyboard=keyboard)
 
             elif response == "в электронной форме":
                 send_message(vk_session, 'user_id', event.user_id, message= "http://online.priem.uniyar.ac.ru", keyboard=keyboard)
@@ -999,8 +1106,55 @@ for event in longpoll.listen():
             elif response == "по почте":
                 send_message(vk_session, 'user_id', event.user_id, message= "150000, Ярославль, ул. Кирова, д. 8/10", keyboard=keyboard)
 
-            elif response == "задайте вопрос":
-                send_message(vk_session, 'user_id', event.user_id, message= "Задайте мне вопрос. Я отвечу в течение дня.", keyboard=keyboard)
+            elif response == "где трудиться?":
+                send_message(vk_session, 'user_id', event.user_id, message= "СВАРЩИК СВАРЩИК ПАРЕНЬ РАБОТЯЩИЙ", keyboard=keyboard)
+
+            elif response == "контакты факультета":
+                if faculty[-1] == "математический":
+                    send_message(vk_session, 'user_id', event.user_id, message= "Адрес факультета: 150008, г. Ярославль, ул. Союзная, 144", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "Телефон деканата: +7 4852 78-85-91", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "Телефон для справок по вопросам поступления : +7 964 482 6310", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "WhatsApp : +7 964 482 6310", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "E-mail по вопросам поступления: kaphedra@mail.ru", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "Группа для абитуриентов ВКонтакте: https://vk.com/math_yargu", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "Группа для абитуриентов ВКонтакте: https://vk.com/math_yargu", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "Наш инстаграм: https://www.instagram.com/math_yargu/", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "Страница школы при математическом факультете: https://math.uniyar.ac.ru/for-scholars", keyboard=keyboard)
+                elif faculty[-1] == "ивт":
+                    send_message(vk_session, 'user_id', event.user_id, message= "Телефон: +7 (4852) 78-85-86", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "EMail: icsdep@uniyar.ac.ru", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "Адрес: 150007, Ярославль, ул. Союзная, 144, 7 корпус", keyboard=keyboard)
+                elif faculty[-1] == "физический":
+                    send_message(vk_session, 'user_id', event.user_id, message= "Телефон: +7 (4852) 30-32-62", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "E-mail: physdep@uniyar.ac.ru", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "Адрес: 150007, Ярославль, ул. Кирова, 8/10, 2-й корпус", keyboard=keyboard)
+                elif faculty[-1] == "экономический":
+                    send_message(vk_session, 'user_id', event.user_id, message= "Адрес: 150000, г. Ярославль, ул. Комсомольская 3 ", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "Декан факультета:", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "   Парфёнова Людмила Борисовна, д.э.н., профессор", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "   Телефон (раб.): (4852) 78-86-14", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "   E-mail: decan@econom.uniyar.ac.ru", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "Методист очной формы обучения:", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "   Каримова Галина Васильевна", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "   Телефон (раб.): (4852) 78-86-13", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "Методист очно-заочной и заочной форм обучения:", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "   Жулябина Светлана Вячеславовна", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "   Телефон (раб.): (4852) 78-86-20", keyboard=keyboard)
+                elif faculty[-1] == "фспн":
+                    send_message(vk_session, 'user_id', event.user_id, message= "Адрес: 150000, г. Ярославль, ул. Советская, 10", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "Телефон: +7 (4852) 78-85-21", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "EMail: fspn@uniyar.ac.ru", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "   Телефон (раб.): (4852) 78-86-14", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "   E-mail: decan@econom.uniyar.ac.ru", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "Методист очной формы обучения:", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "   Каримова Галина Васильевна", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "   Телефон (раб.): (4852) 78-86-13", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "Методист очно-заочной и заочной форм обучения:", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "   Жулябина Светлана Вячеславовна", keyboard=keyboard)
+                    send_message(vk_session, 'user_id', event.user_id, message= "   Телефон (раб.): (4852) 78-86-20", keyboard=keyboard)
+
+            elif response == "вопрос":
+                send_message(vk_session, 'user_id', event.user_id, message= "Зайдайте мне вопрос. Я отвечу в течение дня.", keyboard=keyboard)
 
             elif response == "приёмная комиссия":
                 send_message(vk_session, 'user_id', event.user_id, message= 'Приёмная комиссия:', keyboard=keyboard)
@@ -1014,7 +1168,7 @@ for event in longpoll.listen():
             elif response == "адрес":
                 send_message(vk_session, 'user_id', event.user_id, message="150000, г. Ярославль, ул.Кирова 8/10, каб. 102", keyboard=keyboard)
                 send_message(vk_session, 'user_id', event.user_id, message='Как до нас добраться:', keyboard=keyboard)
-                send_message(vk_session, 'user_id', event.user_id, message='Проезд от вокзала «Ярославль-Главный» троллейбусом №1 до остановки «пл. Волкова» или Любым видом общественного транспорта до остановки «пл. Богоявления»', keyboard=keyboard)
+                send_message(vk_session, 'user_id', event.user_id, message=' Проезд от вокзала «Ярославль-Главный» троллейбусом №1 до остановки «пл. Волкова» или Любым видом общественного транспорта до остановки «пл. Богоявления»', keyboard=keyboard)
 
             elif response == "телефон":
                 send_message(vk_session, 'user_id', event.user_id, message= '+7(4852)30-32-10, 78-85-33', keyboard=keyboard)
@@ -1035,7 +1189,7 @@ for event in longpoll.listen():
                 send_message(vk_session, 'user_id', event.user_id, message= 'Факультеты:', keyboard=keyboard)
 
             elif response == "узнать свой рейтинг":
-                send_message(vk_session, 'user_id', event.user_id, message= full_info('Студент 1'))
+                send_message(vk_session, 'user_id', event.user_id, message= full_info('Дык Фам'))
 
             elif response == "специальности":
                 send_message(vk_session, 'user_id', event.user_id, message= 'Специальности:', keyboard=keyboard)
@@ -1052,8 +1206,8 @@ for event in longpoll.listen():
             elif response == "юридический":
                 send_message(vk_session, 'user_id', event.user_id, message= 'Юридический:', keyboard=keyboard)
 
-            elif response == "ИВТ":
-                send_message(vk_session, 'user_id', event.user_id, message= 'ИВТ:', keyboard=keyboard)
+            elif response == "ивт":
+                send_message(vk_session, 'user_id', event.user_id, message= 'Факультет информатики и вычислительной техники:', keyboard=keyboard)
 
             elif response == "математический":
                 send_message(vk_session, 'user_id', event.user_id, message= 'Математический:', keyboard=keyboard)
@@ -1061,14 +1215,14 @@ for event in longpoll.listen():
             elif response == "физический":
                 send_message(vk_session, 'user_id', event.user_id, message= 'Физический:', keyboard=keyboard)
 
-            elif response == "биологический":
-                send_message(vk_session, 'user_id', event.user_id, message= 'Биологический:', keyboard=keyboard)
+            elif response == "биологии и экологии":
+                send_message(vk_session, 'user_id', event.user_id, message= 'Факультет биологии и экологии:', keyboard=keyboard)
 
             elif response == "психологический":
                 send_message(vk_session, 'user_id', event.user_id, message= 'Психологический:', keyboard=keyboard)
 
-            elif response == "филологии и коммуникации":
-                send_message(vk_session, 'user_id', event.user_id, message= 'Филологии и коммуникации:', keyboard=keyboard)
+            elif response == "филологический":
+                send_message(vk_session, 'user_id', event.user_id, message= 'Филологический:', keyboard=keyboard)
 
             elif response == "институт ин. языков":
                 send_message(vk_session, 'user_id', event.user_id, message= 'Институт иностранных языков:', keyboard=keyboard)
@@ -1080,7 +1234,7 @@ for event in longpoll.listen():
                 send_message(vk_session, 'user_id', event.user_id, message= 'Исторический:', keyboard=keyboard)
 
             elif response == "университетский колледж":
-                send_message(vk_session, 'user_id', event.user_id, message= 'Факультет социально политических наук:', keyboard=keyboard)
+                send_message(vk_session, 'user_id', event.user_id, message= 'Унcиверситетский колледж:', keyboard=keyboard)
 
             elif response == "как поступить?":
                 send_message(vk_session, 'user_id', event.user_id, message= 'Как поступить:', keyboard=keyboard)
@@ -1098,10 +1252,10 @@ for event in longpoll.listen():
                 send_message(vk_session, 'user_id', event.user_id, message='Закрыть',keyboard=keyboard)
 
             elif response == "Можно ли оплачивать учёбу не по семестру, а по месячно?":
-                send_message(vk_session, 'user_id', event.user_id, message= full_info('Студент 1'))
+                send_message(vk_session, 'user_id', event.user_id, message= full_info('Дык Фам'))
 
             else:
-                send_message(vk_session, 'user_id', event.user_id, message= '')
+                send_message(vk_session, 'user_id', event.user_id, message= send(response))
 
 
         # elif event.from_chat :

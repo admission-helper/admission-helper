@@ -142,16 +142,6 @@ def f_ck(keyboard):
     keyboard.add_button('Назад', color=VkKeyboardColor.DEFAULT)
     return keyboard
 
-def how(keyboard):
-    keyboard.add_button('Выберите направление', color=VkKeyboardColor.POSITIVE)
-    keyboard.add_line()
-    keyboard.add_button('Способы подачи', color=VkKeyboardColor.NEGATIVE)
-    keyboard.add_line()
-    keyboard.add_button('Задайте вопрос', color=VkKeyboardColor.PRIMARY)
-    keyboard.add_line()
-    keyboard.add_button('Назад', color=VkKeyboardColor.DEFAULT)
-    return keyboard
-
 def economic_directions(keyboard):
     keyboard.add_button("Экономика", color=VkKeyboardColor.PRIMARY)
     keyboard.add_line()
@@ -251,82 +241,24 @@ def feel_f_ck_directions(keyboard):
     keyboard.add_button("Назад", color=VkKeyboardColor.DEFAULT)
     return keyboard
 
-def direction_menu(keyboard):
-    keyboard.add_button('Количество бюджетных мест', color=VkKeyboardColor.POSITIVE)
+def how(keyboard):
+    keyboard.add_button('Выберите направление', color=VkKeyboardColor.NEGATIVE)
     keyboard.add_line()
-    keyboard.add_button('Проходной балл', color=VkKeyboardColor.NEGATIVE)
+    keyboard.add_button('Способы подачи', color=VkKeyboardColor.PRIMARY)
     keyboard.add_line()
-    keyboard.add_button('Стоимость обучения', color=VkKeyboardColor.PRIMARY)
+    keyboard.add_button('Задайте вопрос', color=VkKeyboardColor.PRIMARY)
     keyboard.add_line()
     keyboard.add_button('Назад', color=VkKeyboardColor.DEFAULT)
     return keyboard
 
-def ways(keyboard):
-    keyboard.add_button("Лично", color=VkKeyboardColor.POSITIVE)
+def direction_menu(keyboard):
+    keyboard.add_button('Количество бюджетных мест', color=VkKeyboardColor.NEGATIVE)
     keyboard.add_line()
-    keyboard.add_button("В электронной форме", color=VkKeyboardColor.NEGATIVE)
+    keyboard.add_button('Проходной балл', color=VkKeyboardColor.PRIMARY)
     keyboard.add_line()
-    keyboard.add_button("По почте", color=VkKeyboardColor.PRIMARY)
+    keyboard.add_button('Стоимость обучения', color=VkKeyboardColor.PRIMARY)
     keyboard.add_line()
-    keyboard.add_button("Назад", color=VkKeyboardColor.DEFAULT)
-    return keyboard
-
-def phys_where(keyboard):
-    keyboard.add_button("Ярославский радиозавод", color=VkKeyboardColor.PRIMARY)
-    keyboard.add_line()
-    keyboard.add_button("ИТ-центр Ярославль", color=VkKeyboardColor.PRIMARY)
-    keyboard.add_line()
-    keyboard.add_button("Тензор", color=VkKeyboardColor.PRIMARY)
-    keyboard.add_line()
-    keyboard.add_button("Ростелеком", color=VkKeyboardColor.PRIMARY)
-    keyboard.add_line()
-    keyboard.add_button("Диасофт", color=VkKeyboardColor.PRIMARY)
-    keyboard.add_line()
-    keyboard.add_button("Сбербанк", color=VkKeyboardColor.PRIMARY)
-    keyboard.add_line()
-    keyboard.add_button("Балтика", color=VkKeyboardColor.PRIMARY)
-    keyboard.add_line()
-    keyboard.add_button("Назад", color=VkKeyboardColor.DEFAULT)
-    return keyboard
-
-def it_where(keyboard):
-    keyboard.add_button("Тензор", color=VkKeyboardColor.PRIMARY)
-    keyboard.add_button("НПО 'Криста'", color=VkKeyboardColor.PRIMARY)
-    keyboard.add_line()
-    keyboard.add_button("Стек", color=VkKeyboardColor.PRIMARY)
-    keyboard.add_button("Фогсофт", color=VkKeyboardColor.PRIMARY)
-    keyboard.add_line()
-    keyboard.add_button("Аквелон", color=VkKeyboardColor.PRIMARY)
-    keyboard.add_button("ArealIdea", color=VkKeyboardColor.PRIMARY)
-    keyboard.add_line()
-    keyboard.add_button("Cetera", color=VkKeyboardColor.PRIMARY)
-    keyboard.add_button("Диасофт", color=VkKeyboardColor.PRIMARY)
-    keyboard.add_line()
-    keyboard.add_button("Баланс", color=VkKeyboardColor.PRIMARY)
-    keyboard.add_button("Алан", color=VkKeyboardColor.PRIMARY)
-    keyboard.add_line()
-    keyboard.add_button("Лабмедиа", color=VkKeyboardColor.PRIMARY)
-    keyboard.add_button("Айти-Консалтинг", color=VkKeyboardColor.PRIMARY)
-    keyboard.add_line()
-    keyboard.add_button("Назад", color=VkKeyboardColor.DEFAULT)
-    return keyboard
-
-def math_where(keyboard):
-    keyboard.add_button("Akvelon", color=VkKeyboardColor.PRIMARY)
-    keyboard.add_line()
-    keyboard.add_button("ООО 'Стандарт безопасности'", color=VkKeyboardColor.PRIMARY)
-    keyboard.add_line()
-    keyboard.add_button("Диасофт", color=VkKeyboardColor.PRIMARY)
-    keyboard.add_line()
-    keyboard.add_button("Confirmit", color=VkKeyboardColor.PRIMARY)
-    keyboard.add_line()
-    keyboard.add_button("Стек", color=VkKeyboardColor.PRIMARY)
-    keyboard.add_line()
-    keyboard.add_button("Фогсофт", color=VkKeyboardColor.PRIMARY)
-    keyboard.add_line()
-    keyboard.add_button("Тензор", color=VkKeyboardColor.PRIMARY)
-    keyboard.add_line()
-    keyboard.add_button("Назад", color=VkKeyboardColor.DEFAULT)
+    keyboard.add_button('Назад', color=VkKeyboardColor.DEFAULT)
     return keyboard
 
 def f_ck_info(keyboard):
@@ -339,6 +271,60 @@ def f_ck_info(keyboard):
     keyboard.add_button("Руководство", color=VkKeyboardColor.PRIMARY)
     keyboard.add_line()
     keyboard.add_button('Назад', color=VkKeyboardColor.DEFAULT)
+
+def sc_math_f_ck_directions(keyboard):
+    keyboard.add_button('Математика и компьютерные науки', color=VkKeyboardColor.PRIMARY)
+    keyboard.add_line()
+    keyboard.add_button('Прикладная математика и информатика', color=VkKeyboardColor.PRIMARY)
+    keyboard.add_line()
+    keyboard.add_button('Информационная безопасность', color=VkKeyboardColor.PRIMARY)
+    keyboard.add_line()
+    keyboard.add_button('Компьютерная безопасность', color=VkKeyboardColor.PRIMARY)
+    keyboard.add_line()
+    keyboard.add_button('Назад', color=VkKeyboardColor.DEFAULT)
+    return keyboard
+
+def sc_math_f_ck_directions_direction(keyboard):
+    keyboard.add_button('Срок обучения', color=VkKeyboardColor.PRIMARY)
+    keyboard.add_line()
+    keyboard.add_button('Основа обучения', color=VkKeyboardColor.PRIMARY)
+    keyboard.add_line()
+    keyboard.add_button('Изучаемые дисциплины', color=VkKeyboardColor.PRIMARY)
+    keyboard.add_line()
+    keyboard.add_button('Кем вы сможете работать', color=VkKeyboardColor.PRIMARY)
+    keyboard.add_line()
+    keyboard.add_button('Назад', color=VkKeyboardColor.DEFAULT)
+    return keyboard
+
+def sc_math_f_ck_questions(keyboard):
+    keyboard.add_button('Сколько я буду учиться?', color=VkKeyboardColor.PRIMARY)
+    keyboard.add_line()
+    keyboard.add_button('Какую квалификацию мне присвоят?', color=VkKeyboardColor.PRIMARY)
+    keyboard.add_line()
+    keyboard.add_button('Какие экзамены мне нужно сдавать?', color=VkKeyboardColor.PRIMARY)
+    keyboard.add_line()
+
+def sc_math_f_ck_questions_training(keyboard):
+    keyboard.add_button('Математика и компьютерные науки', color=VkKeyboardColor.PRIMARY) # 4 года
+    keyboard.add_line()
+    keyboard.add_button('Прикладная математика и информатика', color=VkKeyboardColor.PRIMARY) # 4 года
+    keyboard.add_line()
+    keyboard.add_button('Информационная безопасность', color=VkKeyboardColor.PRIMARY) # 4 года
+    keyboard.add_line()
+    keyboard.add_button('Компьютерная безопасность', color=VkKeyboardColor.PRIMARY) # 4 года
+    keyboard.add_line()
+    keyboard.add_button('Назад', color=VkKeyboardColor.DEFAULT) # 5,5 лет
+    return keyboard
+
+def sc_math_f_ck_questions(keyboard):
+    keyboard.add_button('Как поступить?', color=VkKeyboardColor.POSITIVE)
+    keyboard.add_line()
+    keyboard.add_button('Как учиться?', color=VkKeyboardColor.NEGATIVE)
+    keyboard.add_line()
+    keyboard.add_button('Где трудиться?', color=VkKeyboardColor.PRIMARY)
+    keyboard.add_line()
+    keyboard.add_button('Назад', color=VkKeyboardColor.DEFAULT)
+    return keyboard
 
 def submit_documents(keyboard):
     keyboard.add_button('Посмотреть направления', color=VkKeyboardColor.POSITIVE)
