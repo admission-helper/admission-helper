@@ -5,6 +5,7 @@ nltk.download("stopwords")
 
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
+from keras.models import load_model
 
 import json
 import pickle
