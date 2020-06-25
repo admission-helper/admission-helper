@@ -10,12 +10,14 @@ import random
 from student import full_info
 from commands import *
 
+from secret import token
+
 from chat_bot import model, start
 
 #login, password='login','password'
 # vk_session = vk_api.VkApi(login, password)
 # vk_session.auth()
-token ='d42dbd70cec94a365ea175cdf198e47cf64e3ff0f61510640f2e2c32837c383294464ca6a36eda1a60c98'
+
 vk_session = vk_api.VkApi(token=token)
 
 session_api = vk_session.get_api()
