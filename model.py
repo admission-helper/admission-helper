@@ -1,7 +1,11 @@
-from keras.models import Sequential, load_model
-import os
+import numpy as np
 
-def create_model():
+from keras.models import Sequential, load_model
+from keras.layers import Dense, Activation, Dropout
+from keras.optimizers import SGD
+
+
+def create_model(name, train_x, train_y):
     # Create model - 3 layers. First layer 128 neurons, second layer 64 neurons and 3rd output layer contains number of neurons
     # equal to number of intents to predict output intent with softmax
     model = Sequential()
@@ -18,13 +22,6 @@ def create_model():
 
     #fitting and saving the model
     hist = model.fit(np.array(train_x), np.array(train_y), epochs=200, batch_size=5, verbose=1)
-    model.save('chatbot_model.h5', hist)
+    model.save(name, hist)
 
     return model
-
-def get_model():
-    name = 'chatbot_model.h5'
-    if (os.path.exists('./' + name)):
-        return load_model(name)
-    else:
-        return create_model()

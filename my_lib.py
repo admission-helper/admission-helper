@@ -11,6 +11,7 @@ import pickle
 
 import numpy as np
 import random
+import os
 
-from keras.layers import Dense, Activation, Dropout
-from keras.optimizers import SGD
+
+

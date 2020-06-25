@@ -1,6 +1,6 @@
 from my_lib import *
 
-from model import get_model
+from model import create_model
 from correct import correct_msg
 
 words = []
@@ -58,7 +58,13 @@ training = np.array(training)
 # create train and test lists. X - patterns, Y - intents
 train_x = list(training[:,0])
 train_y = list(training[:,1])
-# print("Training data created")
+
+def get_model():
+    name = 'chatbot_model.h5'
+    if (os.path.exists('./' + name)):
+        return load_model(name)
+    else:
+        return create_model(name, train_x, train_y)
 
 def clean_up_sentence(sentence):
     sentence_words = nltk.word_tokenize(sentence)
@@ -112,21 +118,22 @@ def chatbot_response(msg, model):
 
 
 
-def start(model):
-    while True:
-        msg = input('You: ')
-        msg = correct_msg(msg)
+# def start(model):
+#     while True:
+#         msg = input('You: ')
+#         msg = correct_msg(msg)
 
-        if msg.lower() == "выход!":
-            break
+#         if msg.lower() == "выход!":
+#             break
 
-        res = chatbot_response(msg, model)
-        print(res)
+#         res = chatbot_response(msg, model)
+#         print(res)
 
-# def start(msg):
-    # msg = correct_msg(msg)
-    # res = chatbot_response(msg)
+def start(msg, model):
+    msg = correct_msg(msg)
+    res = chatbot_response(msg, model)
     # print(res)
+    return res
 
 model = get_model()
-start(model)
+# start(model)
