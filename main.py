@@ -14,7 +14,7 @@ from secret import token
 
 from chat_bot import model, start
 
-#login, password='login','password'
+# login, password='login','password'
 # vk_session = vk_api.VkApi(login, password)
 # vk_session.auth()
 

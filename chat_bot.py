@@ -8,8 +8,9 @@ classes = []
 documents = []
 ignore_words = stopwords.words("russian")
 
-data_file = open('intents.json').read()
-intents = json.loads(data_file)
+with open("intents.json", "r", encoding="utf-8") as data_file:
+    intents = json.load(data_file)
+
 lemmatizer = WordNetLemmatizer()
 
 for intent in intents['intents']:
@@ -23,7 +24,6 @@ for intent in intents['intents']:
         # adding classes to our class list
         if intent['tag'] not in classes:
             classes.append(intent['tag'])
-
 
 words = [lemmatizer.lemmatize(w.lower()) for w in words if w not in ignore_words]
 
