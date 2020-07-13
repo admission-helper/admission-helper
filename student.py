@@ -16,10 +16,14 @@ class Student:
         return info
         # print('Оригинал аттестата: ' + self.diploma)
 
+
 def find_index(student_name):
     name = df['Имя'].tolist()
+    for i in range(len(name)):
+        name[i] = name[i].lower()
     index = name.index(student_name)
     return index + 1
+
 
 def info_by_index(index):
     # summary = []
@@ -39,6 +43,7 @@ def info_by_index(index):
 
     return position
 
+
 def full_info(name):
     try:
         index = find_index(name)
@@ -47,6 +52,11 @@ def full_info(name):
         return student.print_info()
     except:
         return 'Имя не в списке'
+
+
+def number_of_seats():
+    number = (len(df['Оригинал аттестата'].tolist()))
+    return number
 
 # print(full_info('Студент 1'))
 

@@ -8,6 +8,7 @@ from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 import vk_api
 import random
 from student import full_info
+from memo import *
 from commands import *
 
 from secret import token
@@ -27,9 +28,13 @@ longpoll = VkLongPoll(vk_session)
 keyboard_history = []
 text_history = ["Вы и так в самом низу"]
 faculty = ["Ты не выбрал факультет ау"]
+level = ["Ты не выбрал уровень обучения ау"]
 direction = ["Ты не выбрал направление ау"]
+saved_name = ""
+name_field = False
+answer_field = False
+is_saved = False
 
-# model = get_model()
 
 def create_keyboard(response):
     keyboard = VkKeyboard(one_time=False)
@@ -39,71 +44,23 @@ def create_keyboard(response):
         keyboard = start_button(keyboard, keyboard_history)
 
     elif response == "назад":
-        keyboard = return_keyboard(keyboard, keyboard_history)
+        keyboard = return_keyboard(keyboard_history)
 
-    elif response == "приёмная комиссия":
+    elif response == "общая информация":
         text_history.append("старт")
-        keyboard = sc(keyboard, keyboard_history)
+        keyboard = subscribe(keyboard, keyboard_history)
 
-    elif response == "информация для абитуриентов":
-        text_history.append("старт")
-        faculty.append("информация для абитуриентов")
-        keyboard = level(keyboard, keyboard_history)
+    elif response == "информация о вузе":
+        text_history.append("общая информация")
+        keyboard = info(keyboard, keyboard_history)
 
-    elif response == "бакалавриат и специалитет":
-        text_history.append("старт")
-        keyboard = back(keyboard, keyboard_history)
-
-    elif response == "магистратура":
-        text_history.append("старт")
-        keyboard = back(keyboard, keyboard_history)
-
-    elif response == "аспирантура":
-        text_history.append("старт")
-        keyboard = back(keyboard, keyboard_history)
-
-    elif response == "среднее профессиональное образование":
-        text_history.append("старт")
-        keyboard = back(keyboard, keyboard_history)
-
-    elif response == "контакты приёмной комиссии":
-        text_history.append("старт")
-        keyboard = sc_contacts(keyboard, keyboard_history)
-
-    elif response == 'узнать свой рейтинг':
-        text_history.append("старт")
-
-    elif response == 'адрес':
-        text_history.append("старт")
-        keyboard = back(keyboard, keyboard_history)
-
-    elif response == 'телефон':
-        text_history.append("старт")
-        keyboard = back(keyboard, keyboard_history)
-
-    elif response == 'email':
-        text_history.append("старт")
-        keyboard = back(keyboard, keyboard_history)
-
-    elif response == 'skype':
-        text_history.append("старт")
-        keyboard = back(keyboard, keyboard_history)
-
-    elif response == 'телефон (для иностранных граждан)':
-        text_history.append("старт")
-        keyboard = back(keyboard, keyboard_history)
-
-    elif response == 'адрес (для иностранных граждан)':
-        text_history.append("старт")
-        keyboard = back(keyboard, keyboard_history)
-
-    elif response == 'контакты приёмной комиссии':
-        text_history.append("старт")
-        keyboard = sc_contacts(keyboard, keyboard_history)
+    elif response == "контакты":
+        text_history.append("общая информация")
+        keyboard = contacts(keyboard, keyboard_history)
 
     elif response == 'информация по факультетам':
         text_history.append("старт")
-        keyboard = faculties(keyboard, keyboard_history)
+        keyboard = f_cks(keyboard, keyboard_history)
 
     elif response == "юридический":
         text_history.append("информация по факультетам")
@@ -140,8 +97,8 @@ def create_keyboard(response):
         text_history.append("информация по факультетам")
         keyboard = f_ck(keyboard, keyboard_history)
 
-    elif response == "филологический":
-        faculty.append("филологический")
+    elif response == "филологии и коммуникации":
+        faculty.append("филологии и коммуникации")
         text_history.append("информация по факультетам")
         keyboard = f_ck(keyboard, keyboard_history)
 
@@ -155,194 +112,95 @@ def create_keyboard(response):
         text_history.append("информация по факультетам")
         keyboard = f_ck(keyboard, keyboard_history)
 
-    elif response == "количество бюджетных мест":
-        text_history.append(direction[-1])
-        keyboard = back(keyboard, keyboard_history)
+    elif response == "исторический":
+        faculty.append("исторический")
+        text_history.append("информация по факультетам")
+        keyboard = f_ck(keyboard, keyboard_history)
 
-    elif response == "проходной балл":
-        text_history.append(direction[-1])
-        keyboard = back(keyboard, keyboard_history)
-
-    elif response == "стоимость обучения":
-        text_history.append(direction[-1])
-        keyboard = back(keyboard, keyboard_history)
+    elif response == "университетский колледж":
+        faculty.append("университетский колледж")
+        text_history.append("информация по факультетам")
+        keyboard = f_ck(keyboard, keyboard_history)
 
     elif response == "как поступить?":
         text_history.append(faculty[-1])
-        keyboard = how(keyboard, keyboard_history)
+        keyboard = levels(keyboard, keyboard_history)
 
-    elif response == "выберите направление":
-        text_history.append("как поступить?")
-        if faculty[-1] == "экономический":
-            keyboard = economic_directions(keyboard, keyboard_history)
-        elif faculty[-1] == "юридический":
-            keyboard = law_directions(keyboard, keyboard_history)
-        elif faculty[-1] == "исторический":
-            keyboard = history_directions(keyboard, keyboard_history)
-        elif faculty[-1] == "фспн":
-            keyboard = social_directions(keyboard, keyboard_history)
+    elif response == "бакалавриат и специалитет":
+        text_history.append("бакалавриат и специалитет")
+        level.append("бакалавриат и специалитет")
+        if faculty[-1] == "математический":
+            keyboard = math_bachelor(keyboard, keyboard_history)
         elif faculty[-1] == "ивт":
-            keyboard = it_directions(keyboard, keyboard_history)
-        elif faculty[-1] == "математический":
-            keyboard = math_directions(keyboard, keyboard_history)
+            keyboard = it_bachelor(keyboard, keyboard_history)
         elif faculty[-1] == "физический":
-            keyboard = physical_directions(keyboard, keyboard_history)
+            keyboard = physical_bachelor(keyboard, keyboard_history)
         elif faculty[-1] == "биологии и экологии":
-            keyboard = biology_directions(keyboard, keyboard_history)
+            keyboard = biology_bachelor(keyboard, keyboard_history)
         elif faculty[-1] == "психологии":
-            keyboard = psycology_directions(keyboard, keyboard_history)
+            keyboard = psycological_bachelor(keyboard, keyboard_history)
+        elif faculty[-1] == "экономический":
+            keyboard = economic_bachelor(keyboard, keyboard_history)
+        elif faculty[-1] == "фспн":
+            keyboard = social_bachelor(keyboard, keyboard_history)
+        elif faculty[-1] == "юридический":
+            keyboard = law_bachelor(keyboard, keyboard_history)
         elif faculty[-1] == "филологии и коммуникации":
-            keyboard = feel_f_ck_directions(keyboard, keyboard_history)
-        else:
-            keyboard = back(keyboard, keyboard_history)
+            keyboard = feel_f_ck_bachelor(keyboard, keyboard_history)
+        elif faculty[-1] == "исторический":
+            keyboard = historical_bachelor(keyboard, keyboard_history)
 
-    elif response == "прикладная математика и информатика":
-        text_history.append("выберите направления")
-        direction.append("прикладная математика и информатика")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "математика и компьютерные науки":
-        text_history.append("выберите направления")
-        direction.append("математика и компьютерные науки")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "информационная безопасность":
-        text_history.append("выберите направления")
-        direction.append("информационная безопасность")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "компьютерная безопасность":
-        text_history.append("выберите направления")
-        direction.append("компьютерная безопасность")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "прикладная математика и информатика":
-        text_history.append("выберите направления")
-        direction.append("прикладная математика и информатика")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "фундаментальная информатика и информационные технологии":
-        text_history.append("выберите направления")
-        direction.append("фундаментальная информатика и информационные технологии")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "прикладная информаиика в экономике":
-        text_history.append("выберите направления")
-        direction.append("прикладная информаиика в экономике")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "физика":
-        text_history.append("выберите направления")
-        direction.append("физика")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "радиофизика":
-        text_history.append("выберите направления")
-        direction.append("радиофизика")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "радиотехника":
-        text_history.append("выберите направления")
-        direction.append("радиотехника")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "инфокоммуникационные технологии и системы связи":
-        text_history.append("выберите направления")
-        direction.append("инфокоммуникационные технологии и системы связи")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "электроника и наноэлектроника":
-        text_history.append("выберите направления")
-        direction.append("электроника и наноэлектроника")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "химия":
-        text_history.append("выберите направления")
-        direction.append("химия")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "биология":
-        text_history.append("выберите направления")
-        direction.append("биология")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "экология и природопользование":
-        text_history.append("выберите направления")
-        direction.append("экология и природопользование")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "психология":
-        text_history.append("выберите направления")
-        direction.append("психология")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "экономика (бух. учёт, анализ и аудит)":
-        text_history.append("выберите направления")
-        direction.append("экономика (бух. учёт, анализ и аудит)")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "экономика (мировая экономика и международный бизнес)":
-        text_history.append("выберите направления")
-        direction.append("экономика (мировая экономика и международный бизнес)")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "экономика (финансы и кредит)":
-        text_history.append("выберите направления")
-        direction.append("экономика (финансы и кредит)")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "менеджмент":
-        text_history.append("выберите направления")
-        direction.append("менеджмент")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "государственное и муниципальное управление":
-        text_history.append("выберите направления")
-        direction.append("государственное и муниципальное управление")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "социология":
-        text_history.append("выберите направления")
-        direction.append("социология")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "социальная работа":
-        text_history.append("выберите направления")
-        direction.append("социальная работа")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "социальная работа (заочная)":
-        text_history.append("выберите направления")
-        direction.append("социальная работа (заочная)")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "организация работы с молодёжью":
-        text_history.append("выберите направления")
-        direction.append("организация работы с молодёжью")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "организация работы с молодёжью (заочная)":
-        text_history.append("выберите направления")
-        direction.append("организация работы с молодёжью (заочная)")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "политология":
-        text_history.append("выберите направления")
-        direction.append("политология")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "публичная политика и социальные науки":
-        text_history.append("выберите направления")
-        direction.append("публичная политика и социальные науки")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "юриспруденция":
-        text_history.append("выберите направления")
-        direction.append("юриспруденция")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "юриспруденция (очно-заочная)":
-        text_history.append("выберите направления")
-        direction.append("юриспруденция (очно-заочная)")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "прикладная филология":
-        text_history.append("выберите направления")
-        direction.append("прикладная филология")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "зарубежная филология":
-        text_history.append("выберите направления")
-        direction.append("зарубежная филология")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "реклама и связи с общественностью":
-        text_history.append("выберите направления")
-        direction.append("реклама и связи с общественностью")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "туризм":
-        text_history.append("выберите направления")
-        direction.append("туризм")
-        keyboard = direction_menu(keyboard, keyboard_history)
-    elif response == "история":
-        text_history.append("выберите направления")
-        direction.append("история")
-        keyboard = direction_menu(keyboard, keyboard_history)
+    elif response == "магистратура":
+        text_history.append("магистратура")
+        level.append("магистратура")
+        if faculty[-1] == "математический":
+            keyboard = math_bachelor(keyboard, keyboard_history)
+        elif faculty[-1] == "ивт":
+            keyboard = it_bachelor(keyboard, keyboard_history)
+        elif faculty[-1] == "физический":
+            keyboard = physical_bachelor(keyboard, keyboard_history)
+        elif faculty[-1] == "биологии и экологии":
+            keyboard = biology_bachelor(keyboard, keyboard_history)
+        elif faculty[-1] == "психологии":
+            keyboard = psycological_bachelor(keyboard, keyboard_history)
+        elif faculty[-1] == "экономический":
+            keyboard = economic_bachelor(keyboard, keyboard_history)
+        elif faculty[-1] == "фспн":
+            keyboard = social_bachelor(keyboard, keyboard_history)
+        elif faculty[-1] == "юридический":
+            keyboard = law_bachelor(keyboard, keyboard_history)
+        elif faculty[-1] == "филологии и коммуникации":
+            keyboard = feel_f_ck_bachelor(keyboard, keyboard_history)
+        elif faculty[-1] == "исторический":
+            keyboard = historical_bachelor(keyboard, keyboard_history)
+
+    elif response == "аспирантура":
+        text_history.append("аспирантура")
+        level.append("аспирантура")
+        if faculty[-1] == "математический":
+            keyboard = math_graduate(keyboard, keyboard_history)
+        elif faculty[-1] == "ивт":
+            keyboard = it_graduate(keyboard, keyboard_history)
+        elif faculty[-1] == "физический":
+            keyboard = physical_graduate(keyboard, keyboard_history)
+        elif faculty[-1] == "биологии и экологии":
+            keyboard = biology_graduate(keyboard, keyboard_history)
+        elif faculty[-1] == "психологии":
+            keyboard = psycological_graduate(keyboard, keyboard_history)
+        elif faculty[-1] == "экономический":
+            keyboard = economic_graduate(keyboard, keyboard_history)
+        elif faculty[-1] == "фспн":
+            keyboard = social_graduate(keyboard, keyboard_history)
+        elif faculty[-1] == "юридический":
+            keyboard = law_graduate(keyboard, keyboard_history)
+        elif faculty[-1] == "филологии и коммуникации":
+            keyboard = feel_f_ck_graduate(keyboard, keyboard_history)
+        elif faculty[-1] == "исторический":
+            keyboard = historical_graduate(keyboard, keyboard_history)
 
     elif response == "способы подачи документов":
         text_history.append("как поступить?")
         keyboard = variants(keyboard, keyboard_history)
-
-    elif response == "лично":
-        keyboard = back(keyboard, keyboard_history)
 
     elif response == "где трудиться?":
         text_history.append(faculty[-1])
@@ -359,13 +217,22 @@ def create_keyboard(response):
 
     elif response == "направления":
         text_history.append(faculty[-1])
-        keyboard = level(keyboard, keyboard_history)
+        keyboard = levels(keyboard, keyboard_history)
 
     elif response == 'привет':
         keyboard.add_button('Тест', color=VkKeyboardColor.POSITIVE)
 
+    elif response == 'узнать свой рейтинг':
+        text_history.append("старт")
+        keyboard = change(keyboard, keyboard_history)
+
+    elif response == "да" or response == "нет":
+        keyboard = back(keyboard, keyboard_history)
+
+    #elif full_info(response) != 'Имя нет в списке':
+        #keyboard = save(keyboard, keyboard_history)
+
     elif response == 'закрыть':
-        #print('закрываем клаву')
         return keyboard.get_empty_keyboard()
 
     else:
@@ -377,7 +244,7 @@ def create_keyboard(response):
     return keyboard
 
 def send_message(vk_session, id_type, id, message=None, attachment=None, keyboard=None):
-    vk_session.method('messages.send',{id_type: id, 'message': message, 'random_id': random.randint(-2147483648, +2147483648), "attachment": attachment, 'keyboard': keyboard})
+    vk_session.method('messages.send', {id_type: id, 'message': message, 'random_id': random.randint(-2147483648, +2147483648), "attachment": attachment, 'keyboard': keyboard})
 
 for event in longpoll.listen():
     if event.type == VkEventType.MESSAGE_NEW:
@@ -391,534 +258,625 @@ for event in longpoll.listen():
             # if response == "котики":
             #     attachment = get_pictures.get(vk_session, -130670107, session_api)
             #     send_message(vk_session, 'user_id', event.user_id, message='Держи котиков!', attachment=attachment, keyboard=keyboard)
+
             if response == "привет":
                 send_message(vk_session, 'user_id', event.user_id, message='Нажми на кнопку, чтобы получить список команд',keyboard=keyboard)
 
             elif response == "назад":
-                send_message(vk_session, 'user_id', event.user_id, message= text_history[-1], keyboard=keyboard)
+                send_message(vk_session, 'user_id', event.user_id, message=text_history[-1], keyboard=keyboard)
 
             elif response == "старт":
                 send_message(vk_session, 'user_id', event.user_id, message= 'Тестовые команды:', keyboard=keyboard)
 
+            elif response == "общая информация":
+                send_message(vk_session, 'user_id', event.user_id, message= 'Общая информация:', keyboard=keyboard)
+
+            elif response == "информация о вузе":
+                send_message(vk_session, 'user_id', event.user_id, message='Информация о вузе:', keyboard=keyboard)
+
+            elif response == "контакты":
+                send_message(vk_session, 'user_id', event.user_id, message='Контакты:', keyboard=keyboard)
+
+            elif response == "история вуза":
+                send_message(vk_session, 'user_id', event.user_id, message='Появился.')
+
+            elif response == "учёный совет":
+                send_message(vk_session, 'user_id', event.user_id, message='Илья Апальков и остальные замы')
+
+            elif response == "основные документы":
+                send_message(vk_session, 'user_id', event.user_id, message='Методичка Кубышкина')
+
+            elif response == "контакты вуза":
+                send_message(vk_session, 'user_id', event.user_id, message="Адрес: 150003, г. Ярославль, ул. Советская, д. 14\n"
+                                                                           "График работы: пн, вт, ср, чт: 9.00-12.00, 14.00-17.00, пт: 9.00-12.00, 14.00-16.00.\n"
+                                                                           "Телефон: +7 (4852) 79-77-94\n"
+                                                                           "e-mail: rectorat@uniyar.ac.ru\n"
+                                                                           "Группа ВКонтакте: https://vk.com/yaroslavl_state_university\n"
+                                                                           "Инстаграм: https://www.instagram.com/demid_yargu/")
+
+            elif response == "контакты приёмной комиссии":
+                send_message(vk_session, 'user_id', event.user_id, message="Адрес: 150000, г. Ярославль, ул.Кирова 8/10, каб. 102\n"
+                                                                           "График работы: понедельник - пятница: 09:00 - 16:00; суббота: 10:00 - 13:00\n"
+                                                                           "Телефон: +7(4852)30-32-10, 78-85-33\n"
+                                                                           "e-mail: abitur@uniyar.ac.ru\n"
+                                                                           "Группа ВКонтакте: https://vk.com/uniyar_abitur")
+
+            elif response == "контакты приёмной комиссии (для иностранных граждан)":
+                send_message(vk_session, 'user_id', event.user_id, message="Адрес: 150000, г. Ярославль, ул.Кирова 8/10, каб. 102\n"
+                                                                           "График работы: понедельник - пятница: 09:00 - 16:00; суббота: 10:00 - 13:00\n"
+                                                                           "Телефон: +7 (4852) 79-77-45, 79-77-46\n"
+                                                                           "e-mail: depint@uniyar.ac.ru\n"
+                                                                           "Группа ВКонтакте: https://vk.com/uniyar_abitur")
+
+            elif response == "информация по факультетам":
+                send_message(vk_session, 'user_id', event.user_id, message= 'Выберите факультет:', keyboard=keyboard)
+
             elif response == "бакалавриат и специалитет":
-                if faculty == "информация для абитуриентов":
-                    send_message(vk_session, 'user_id', event.user_id, message= "Количество мест для приема по программам бакалавриата и специалитета 2020 с выделением мест по особому праву и целевых мест", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Количество мест для приема по программам бакалавриата для обучения в ускоренные сроки в 2020 году (на базе среднего профессионального или высшего образования)", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Информация для поступающих на целевое обучение", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Проект расписания вступительных испытаний (для поступающих не по результатам ЕГЭ)", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Список документов при подаче заявления 2020", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Согласие на обработку персональных данных", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Памятка для абитуриента (направления, стоимость, проходные баллы 2019)", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Стоимость обучения в 2020-2021 учебном году", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Положение о скидках по оплате обучения 2019", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "ПРАВИЛА ПРИЕМА ПО ПРОГРАММАМ БАКАЛАВРИАТА И СПЕЦИАЛИТЕТА 2020/2021", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Сроки проведения приема", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Учет индивидуальных достижений", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Программы вступительных испытаний", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Перечень вступительных  испытаний", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Минимальное количество баллов и шкала оценивания", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Формы проведения вступительных испытаний", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Правила подачи и рассмотрения апелляций", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Особенности проведения вступительных испытаний для лиц с ограниченными возможностями здоровья", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Информация об особых правах и преимуществах", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Образцы договоров об оказании платных услуг", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Подача документов в электронной форме", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Места приема документов, почтовые и электронные адреса для направления документов", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Информация об общежитии", keyboard=keyboard)
-                elif faculty == "экономический":
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Экономика', keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Менеджмент', keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Государственное и минуципальное направление', keyboard=keyboard)
-                elif faculty == "юридический":
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Юриспруденция', keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Юриспруденция (очно-заочный)', keyboard=keyboard)
-                elif faculty == "исторический":
-                    send_message(vk_session, 'user_id', event.user_id, message= 'История', keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Туризм', keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Реклама и связи с общественностью', keyboard=keyboard)
-                elif faculty == "фспн":
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Социальная', keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Социальная работа', keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Политология', keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Публичная политика и социальные науки', keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Организация работы с молодежью', keyboard=keyboard)
-                elif faculty == "ивт":
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Прикладная математика и информатика', keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Фундаментальная информатика и информационные технологии', keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Прикладная информатика', keyboard=keyboard)
-                elif faculty == "математический":
-                    send_message(vk_session, 'user_id', event.user_id, message= "Математика и компьютерные науки", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Прикладная математика и информатика", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Информационная безопасность", keyboard=keyboard)
-                elif faculty == "физический":
-                    send_message(vk_session, 'user_id', event.user_id, message= "Физика", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Радиофизика", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Радиотехника", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Инфокоммуникационные технологии и системы связи ", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Электроника и наноэлектроника ", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Инфокоммуникационные технологии и системы связи (заочная форма)", keyboard=keyboard)
-                elif faculty == "биологии и экологии":
-                    send_message(vk_session, 'user_id', event.user_id, message= "Биология", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Химия", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Экология и природопользование", keyboard=keyboard)
-                elif faculty == "психологии":
-                    send_message(vk_session, 'user_id', event.user_id, message= "Основными направлениями научной работы на факультете являются:", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Метакогнитивная психология деятельности", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Психология практического мышления и опыта", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Психология творческого профессионального мышления ", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Социально-психологические закономерности функционирования коллективного субъекта профессиональной деятельности", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Методология, теория и практика профессиональной деятельности психолога-консультанта", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Интегративная психология", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Психология вузовской адаптации", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Спортивная психология", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Социальное познание в международных отношениях на примере коллективного субъекта (государства)", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Организационная психология", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Когнитивная психология и нейронаука", keyboard=keyboard)
-                elif faculty == "филологии и коммуникации":
-                    send_message(vk_session, 'user_id', event.user_id, message= "Прикладная филология (русский язык)", keyboard=keyboard)
-                elif faculty == "институт иностранных языков":
-                    send_message(vk_session, 'user_id', event.user_id, message= "Зарубежная филология (английский язык и литература)", keyboard=keyboard)
+                send_message(vk_session, 'user_id', event.user_id, message="Выберите направление:", keyboard=keyboard)
 
             elif response == "магистратура":
-                if faculty == "информация для абитуриентов":
-                    send_message(vk_session, 'user_id', event.user_id, message= "Контрольные цифры приема по программам магистратуры 2020", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Проект расписания вступительных испытаний 2020", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Информация для поступающих на целевое обучение", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Проект расписания вступительных испытаний (для поступающих не по результатам ЕГЭ)", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Список документов при подаче заявления 2020", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Согласие на обработку персональных данных", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Стоимость обучения в 2020-2021 учебном году", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Положение о скидках по оплате обучения 2019", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "ПРАВИЛА ПРИЕМА ПО ПРОГРАММАМ МАГИСТРАТУРЫ 2020/2021", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Сроки проведения приема", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Учет индивидуальных достижений", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Программы вступительных испытаний", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Перечень вступительных  испытаний", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Минимальное количество баллов и шкала оценивания", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Формы проведения вступительных испытаний", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Правила подачи и рассмотрения апелляций", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Особенности проведения вступительных испытаний для лиц с ограниченными возможностями здоровья", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Информация об особых правах и преимуществах", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Образцы договоров об оказании платных услуг", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Подача документов в электронной форме", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Места приема документов, почтовые и электронные адреса для направления документов", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Информация об общежитии", keyboard=keyboard)
-                elif faculty == "экономический":
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Экономика', keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Менеджмент', keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Государственное и минуципальное направление', keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Финансы и кредит', keyboard=keyboard)
-                elif faculty == "юридический":
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Юриспруденция', keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Юриспруденция (очно-заочный)', keyboard=keyboard)
-                elif faculty == "исторический":
-                    send_message(vk_session, 'user_id', event.user_id, message= 'История', keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Туризм', keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Музеология и охрана объектов культурного наследия', keyboard=keyboard)
-                elif faculty == "фспн":
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Социальная', keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Социальная работа', keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Организация работы с молодежью', keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Политология', keyboard=keyboard)
-                elif faculty == "ивт":
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Прикладная математика и информатика', keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Фундаментальная информатика и информационные технологии', keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Прикладная информатика', keyboard=keyboard)
-                elif faculty == "математический":
-                    send_message(vk_session, 'user_id', event.user_id, message= "Математика и компьютерные науки", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Прикладная математика и информатика", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Информационная безопасность", keyboard=keyboard)
-                elif faculty == "физический":
-                    send_message(vk_session, 'user_id', event.user_id, message= "Физика", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Радиофизика", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Радиотехника", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Инфокоммуникационные технологии и системы связи ", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Электроника и наноэлектроника ", keyboard=keyboard)
-                elif faculty == "биологии и экологии":
-                    send_message(vk_session, 'user_id', event.user_id, message= "Биология", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Химия", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Экология и природопользование", keyboard=keyboard)
-                elif faculty == "психологии":
-                    send_message(vk_session, 'user_id', event.user_id, message= "Основными направлениями научной работы на факультете являются:", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Метакогнитивная психология деятельности", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Психология практического мышления и опыта", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Психология творческого профессионального мышления ", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Социально-психологические закономерности функционирования коллективного субъекта профессиональной деятельности", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Методология, теория и практика профессиональной деятельности психолога-консультанта", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Интегративная психология", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Психология вузовской адаптации", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Спортивная психология", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Социальное познание в международных отношениях на примере коллективного субъекта (государства)", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Организационная психология", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Когнитивная психология и нейронаука", keyboard=keyboard)
-                elif faculty == "филологии и коммуникации":
-                    send_message(vk_session, 'user_id', event.user_id, message= "Филологическое обеспечение массовой коммуникации", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Филология и коммуникация: теоретический и прикладной аспект", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Филологическое обеспечение экспертной деятельности", keyboard=keyboard)
-                elif faculty == "институт иностранных языков":
-                    send_message(vk_session, 'user_id', event.user_id, message= "Иностранные языки и межкультурная коммуникация", keyboard=keyboard)
+                send_message(vk_session, 'user_id', event.user_id, message="Выберите направление:", keyboard=keyboard)
 
             elif response == "аспирантура":
-                if faculty == "информация для абитуриентов":
-                    send_message(vk_session, 'user_id', event.user_id, message= "Количество мест для приема по программам аспирантуры 2020", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Информация для поступающих на целевое обучение", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Проект расписания вступительных испытаний (для поступающих не по результатам ЕГЭ)", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Список документов при подаче заявления 2020", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Правила приема в аспирантуру 2020/2021", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Сроки проведения приема", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Учет индивидуальных достижений", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Программы вступительных испытаний", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Перечень вступительных  испытаний", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Минимальное количество баллов и шкала оценивания", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Формы проведения вступительных испытаний", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Правила подачи и рассмотрения апелляций", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Особенности проведения вступительных испытаний для лиц с ограниченными возможностями здоровья", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Информация об особых правах и преимуществах", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Образцы договоров об оказании платных услуг", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Подача документов в электронной форме", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Места приема документов, почтовые и электронные адреса для направления документов", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Информация об общежитии", keyboard=keyboard)
-                elif faculty == "фспн":
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Социальная структура, социальные институты и процессы', keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Политические институты, процессы и технологии', keyboard=keyboard)
-                elif faculty == "ивт":
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Математика и механика', keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Компьютерные и информационные науки', keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= 'Информатика и вычислительная техника', keyboard=keyboard)
-                elif faculty == "математический":
-                    send_message(vk_session, 'user_id', event.user_id, message= "Математика и компьютерные науки", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Прикладная математика и информатика", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Информационная безопасность", keyboard=keyboard)
-                elif faculty == "физический":
-                    send_message(vk_session, 'user_id', event.user_id, message= "Физика и астрономия", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Электроника, радиотехника и системы связи ", keyboard=keyboard)
-                elif faculty == "биологии и экологии":
-                    send_message(vk_session, 'user_id', event.user_id, message= "Микробиология", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Физиология", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Органическая химия", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Генетика", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Экология", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Паразитология", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Физиология и биохимия растений", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "Физическая химия", keyboard=keyboard)
-                elif faculty == "психологии":
-                    send_message(vk_session, 'user_id', event.user_id, message= "Основными направлениями научной работы на факультете являются:", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Метакогнитивная психология деятельности", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Психология практического мышления и опыта", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Психология творческого профессионального мышления ", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Социально-психологические закономерности функционирования коллективного субъекта профессиональной деятельности", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Методология, теория и практика профессиональной деятельности психолога-консультанта", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Интегративная психология", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Психология вузовской адаптации", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Спортивная психология", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Социальное познание в международных отношениях на примере коллективного субъекта (государства)", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Организационная психология", keyboard=keyboard)
-                    send_message(vk_session, 'user_id', event.user_id, message= "   Когнитивная психология и нейронаука", keyboard=keyboard)
-
-            elif response == "среднее профессиональное образование":
-                send_message(vk_session, 'user_id', event.user_id, message= "Контрольные цифры приема на 2020/2021 учебный год", keyboard=keyboard)
-                send_message(vk_session, 'user_id', event.user_id, message= "Перечень специальностей, по которым объявляется прием в 2020/2021 учебном году в соответствии с лицензией на осуществление образовательной деятельности", keyboard=keyboard)
-                send_message(vk_session, 'user_id', event.user_id, message= "Список документов при подаче заявления", keyboard=keyboard)
-                send_message(vk_session, 'user_id', event.user_id, message= "Программа творческого вступительного испытания по направлению 35.02.12 «Садово-парковое и ландшафтное строительство»", keyboard=keyboard)
-                send_message(vk_session, 'user_id', event.user_id, message= "Стоимость обучения в 2020-2021 учебном году Образцы договоров ", keyboard=keyboard)
-                send_message(vk_session, 'user_id', event.user_id, message= "ПРАВИЛА ПРИЕМА В УНИВЕРСИТЕТСКИЙ КОЛЛЕДЖ  2020/2021", keyboard=keyboard)
-                send_message(vk_session, 'user_id', event.user_id, message= "Особенности проведения вступительных испытаний для инвалидов и лиц с ограниченными возможностями здоровья", keyboard=keyboard)
-                send_message(vk_session, 'user_id', event.user_id, message= "Подача документов в электронной форме", keyboard=keyboard)
-                send_message(vk_session, 'user_id', event.user_id, message= "Перечень и формы проведения вступительных испытаний", keyboard=keyboard)
-                send_message(vk_session, 'user_id', event.user_id, message= "Информация о необходимости прохождения поступающими обязательного предварительного медицинского осмотра", keyboard=keyboard)
-                send_message(vk_session, 'user_id', event.user_id, message= "Образцы договоров об оказании платных услуг", keyboard=keyboard)
-                send_message(vk_session, 'user_id', event.user_id, message= "Форма проведения вступительных испытаний", keyboard=keyboard)
+                send_message(vk_session, 'user_id', event.user_id, message="Выберите направление:", keyboard=keyboard)
 
             elif response == "прикладная математика и информатика":
-                send_message(vk_session, 'user_id', event.user_id, message= "прикладная математика и информатикад", keyboard=keyboard)
+                if faculty[-1] == "математический":
+                    if level[-1] == "бакалавриат и специалитет":
+                        send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("01.03.02")) + "\n"
+                                                                                   "Проходной балл: " + str(score("01.03.02")) + "\n"
+                                                                                   "Стоимость обучения: " + str(price("01.03.02")) + "\n"
+                                                                                   "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("01.03.02")))
+                    elif level[-1] == "магистратура":
+                        send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_undergraduate("01.04.02")) + "\n"
+                                                                                   "КЦП бюджет: " + str(numbers1_undergraduate("01.04.02")) + "\n"
+                                                                                   "КЦП целевые места: " + str(numbers2_undergraduate("01.04.02")) + "\n"
+                                                                                   "КЦП внебюджет: " + str(numbers3_undergraduate("01.04.02")) + "\n"
+                                                                                   "Вступительное испытание: " + str(exams_undergraduate("01.04.02")))
+                    else:
+                        send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал уровень обучения.\n"
+                                                                                   "Чтобы выбрать уровень обучения выбери: Информация по факультетам -> *Свой факультет* -> Как поступить?")
+                elif faculty[-1] == "ивт":
+                    if level[-1] == "бакалавриат и специалитет":
+                        send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("01.03.02")) + "\n"
+                                                                                   "Проходной балл: " + str(score("01.03.02")) + "\n"
+                                                                                   "Стоимость обучения: " + str(price("01.03.02")) + "\n"
+                                                                                   "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("01.03.02")))
+                    elif level[-1] == "магистратура":
+                        send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_undergraduate("01.04.02")) + "\n"
+                                                                                   "КЦП бюджет: " + str(numbers1_undergraduate("01.04.02")) + "\n"
+                                                                                   "КЦП целевые места: " + str(numbers2_undergraduate("01.04.02")) + "\n"
+                                                                                   "КЦП внебюджет: " + str(numbers3_undergraduate("01.04.02")) + "\n"
+                                                                                   "Вступительное испытание: " + str(exams_undergraduate("01.04.02")))
+                    else:
+                        send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал уровень обучения.\n"
+                                                                                   "Чтобы выбрать уровень обучения выбери: Информация по факультетам -> *Свой факультет* -> Как поступить?")
+                else:
+                    send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал факультет.\n"
+                                                                               "Чтобы выбрать факультет выбери: Информация по факультетам -> *Свой факультет*")
             elif response == "математика и компьютерные науки":
-                send_message(vk_session, 'user_id', event.user_id, message= "математика и компьютерные науки", keyboard=keyboard)
+                if level[-1] == "бакалавриат и специалитет":
+                    send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("02.03.01")) + "\n"
+                                                                               "Проходной балл: " + str(score("02.03.01")) + "\n"
+                                                                               "Стоимость обучения: " + str(price("02.03.01")) + "\n"
+                                                                               "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("02.03.01")))
+                elif level[-1] == "магистратура":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_undergraduate("02.04.01")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_undergraduate("02.04.01")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_undergraduate("02.04.01")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_undergraduate("02.04.01")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_undergraduate("02.04.01")))
+                else:
+                    send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал уровень обучения.\n"
+                                                                               "Чтобы выбрать уровень обучения выбери: Информация по факультетам -> *Свой факультет* -> Как поступить?")
             elif response == "информационная безопасность":
-                send_message(vk_session, 'user_id', event.user_id, message= "информационная безопасность", keyboard=keyboard)
+                if level[-1] == "бакалавриат и специалитет":
+                    send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("10.03.01")) + "\n"
+                                                                               "Проходной балл: " + str(score("10.03.01")) + "\n"
+                                                                               "Стоимость обучения: " + str(price("10.03.01")) + "\n"
+                                                                               "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("10.03.01")))
+                elif level[-1] == "магистратура":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_undergraduate("10.04.01")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_undergraduate("10.04.01")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_undergraduate("10.04.01")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_undergraduate("10.04.01")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_undergraduate("10.04.01")))
+                elif level[-1] == "аспирантура":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_graduate("10.06.01")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_graduate("10.06.01")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_graduate("10.06.01")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_graduate("10.06.01")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_graduate("10.06.01")))
+                else:
+                    send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал уровень обучения.\n"
+                                                                               "Чтобы выбрать уровень обучения выбери: Информация по факультетам -> *Свой факультет* -> Как поступить?")
             elif response == "компьютерная безопасность":
-                send_message(vk_session, 'user_id', event.user_id, message= "компьютерная безопасность", keyboard=keyboard)
-            elif response == "прикладная математика и информатика":
-                send_message(vk_session, 'user_id', event.user_id, message= "прикладная математика и информатика", keyboard=keyboard)
+                send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("10.05.01")) + "\n"
+                                                                           "Проходной балл: " + str(score("10.05.01")) + "\n"
+                                                                           "Стоимость обучения: " + str(price("10.05.01")) + "\n"
+                                                                           "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("10.05.01")))
+            elif response == "математика и механика":
+                if faculty[-1] == "математический":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_graduate("01.06.01")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_graduate("01.06.01")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_graduate("01.06.01")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_graduate("01.06.01")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_graduate("01.06.01")))
+                elif faculty[-1] == "ивт":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_graduate("01.06.01")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_graduate("01.06.01")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_graduate("01.06.01")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_graduate("01.06.01")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_graduate("01.06.01")))
+                else:
+                    send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал факультет.\n"
+                                                                               "Чтобы выбрать факультет выбери: Информация по факультетам -> *Свой факультет*")
+            elif response == "информатика и вычислительная техника":
+                if faculty[-1] == "математический":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_graduate("09.06.01")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_graduate("09.06.01")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_graduate("09.06.01")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_graduate("09.06.01")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_graduate("09.06.01")))
+                elif faculty[-1] == "ивт":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_graduate("09.06.01")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_graduate("09.06.01")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_graduate("09.06.01")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_graduate("09.06.01")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_graduate("09.06.01")))
+                else:
+                    send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал факультет.\n"
+                                                                               "Чтобы выбрать факультет выбери: Информация по факультетам -> *Свой факультет*")
+            elif response == "информационная безопасность":
+                send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_graduate("10.06.01")) + "\n"
+                                                                           "КЦП бюджет: " + str(numbers1_graduate("10.06.01")) + "\n"
+                                                                           "КЦП целевые места: " + str(numbers2_graduate("10.06.01")) + "\n"
+                                                                           "КЦП внебюджет: " + str(numbers3_graduate("10.06.01")) + "\n"
+                                                                           "Вступительное испытание: " + str(exams_graduate("10.06.01")))
             elif response == "фундаментальная информатика и информационные технологии":
-                send_message(vk_session, 'user_id', event.user_id, message= "фундаментальная информатика и информационные технологии", keyboard=keyboard)
-            elif response == "прикладная информаиика в экономике":
-                send_message(vk_session, 'user_id', event.user_id, message= "прикладная информаиика в экономике", keyboard=keyboard)
+                if level[-1] == "бакалавриат и специалитет":
+                    send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("02.03.02")) + "\n"
+                                                                               "Проходной балл: " + str(score("02.03.02")) + "\n"
+                                                                               "Стоимость обучения: " + str(price("02.03.02")) + "\n"
+                                                                               "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("02.03.02")))
+                elif level[-1] == "магистратура":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_undergraduate("02.04.02")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_undergraduate("02.04.02")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_undergraduate("02.04.02")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_undergraduate("02.04.02")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_undergraduate("02.04.02")))
+                else:
+                    send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал уровень обучения.\n"
+                                                                               "Чтобы выбрать уровень обучения выбери: Информация по факультетам -> *Свой факультет* -> Как поступить?")
+            elif response == "прикладная информатика в экономике":
+                send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("09.03.03")) + "\n"
+                                                                           "Проходной балл: " + str(score("09.03.03")) + "\n"
+                                                                           "Стоимость обучения: " + str(price("09.03.03")) + "\n"
+                                                                           "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("09.03.03")))
+            elif response == "прикладная информатика":
+                send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_undergraduate("09.04.03")) + "\n"
+                                                                           "КЦП бюджет: " + str(numbers1_undergraduate("09.04.03")) + "\n"
+                                                                           "КЦП целевые места: " + str(numbers2_undergraduate("09.04.03")) + "\n"
+                                                                           "КЦП внебюджет: " + str(numbers3_undergraduate("09.04.03")) + "\n"
+                                                                           "Вступительное испытание: " + str(exams_undergraduate("09.04.03")))
+            elif response == "компьютерные и информационные науки":
+                send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_graduate("02.06.01")) + "\n"
+                                                                           "КЦП бюджет: " + str(numbers1_graduate("02.06.01")) + "\n"
+                                                                           "КЦП целевые места: " + str(numbers2_graduate("02.06.01")) + "\n"
+                                                                           "КЦП внебюджет: " + str(numbers3_graduate("02.06.01")) + "\n"
+                                                                           "Вступительное испытание: " + str(exams_graduate("02.06.01")))
             elif response == "физика":
-                send_message(vk_session, 'user_id', event.user_id, message= "физика", keyboard=keyboard)
+                if level[-1] == "бакалавриат и специалитет":
+                    send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("03.03.02")) + "\n"
+                                                                               "Проходной балл: " + str(score("03.03.02")) + "\n"
+                                                                               "Стоимость обучения: " + str(price("03.03.02")) + "\n"
+                                                                               "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("03.03.02")))
+                elif level[-1] == "магистратура":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_undergraduate("03.04.02")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_undergraduate("03.04.02")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_undergraduate("03.04.02")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_undergraduate("03.04.02")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_undergraduate("03.04.02")))
+                else:
+                    send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал уровень обучения.\n"
+                                                                               "Чтобы выбрать уровень обучения выбери: Информация по факультетам -> *Свой факультет* -> Как поступить?")
             elif response == "радиофизика":
-                send_message(vk_session, 'user_id', event.user_id, message= "радиофизика", keyboard=keyboard)
+                if level[-1] == "бакалавриат и специалитет":
+                    send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("03.03.03")) + "\n"
+                                                                               "Проходной балл: " + str(score("03.03.03")) + "\n"
+                                                                               "Стоимость обучения: " + str(price("03.03.03")) + "\n"
+                                                                               "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("03.03.03")))
+                elif level[-1] == "магистратура":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_undergraduate("03.04.03")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_undergraduate("03.04.03")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_undergraduate("03.04.03")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_undergraduate("03.04.03")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_undergraduate("03.04.03")))
+                else:
+                    send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал уровень обучения.\n"
+                                                                               "Чтобы выбрать уровень обучения выбери: Информация по факультетам -> *Свой факультет* -> Как поступить?")
             elif response == "радиотехника":
-                send_message(vk_session, 'user_id', event.user_id, message= "радиотехника", keyboard=keyboard)
+                if level[-1] == "бакалавриат и специалитет":
+                    send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("11.03.01")) + "\n"
+                                                                               "Проходной балл: " + str(score("11.03.01")) + "\n"
+                                                                               "Стоимость обучения: " + str(price("11.03.01")) + "\n"
+                                                                               "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("11.03.01")))
+                elif level[-1] == "магистратура":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_undergraduate("11.04.01")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_undergraduate("11.04.01")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_undergraduate("11.04.01")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_undergraduate("11.04.01")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_undergraduate("11.04.01")))
+                else:
+                    send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал уровень обучения.\n"
+                                                                               "Чтобы выбрать уровень обучения выбери: Информация по факультетам -> *Свой факультет* -> Как поступить?")
             elif response == "инфокоммуникационные технологии и системы связи":
-                send_message(vk_session, 'user_id', event.user_id, message= "инфокоммуникационные технологии и системы связи", keyboard=keyboard)
+                if level[-1] == "бакалавриат и специалитет":
+                    send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("11.03.02")) + "\n"
+                                                                               "Проходной балл: " + str(score("11.03.02")) + "\n"
+                                                                               "Стоимость обучения: " + str(price("11.03.02")) + "\n"
+                                                                               "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("11.03.02")))
+                elif level[-1] == "магистратура":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_undergraduate("11.04.02")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_undergraduate("11.04.02")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_undergraduate("11.04.02")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_undergraduate("11.04.02")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_undergraduate("11.04.02")))
+                else:
+                    send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал уровень обучения.\n"
+                                                                               "Чтобы выбрать уровень обучения выбери: Информация по факультетам -> *Свой факультет* -> Как поступить?")
             elif response == "электроника и наноэлектроника":
-                send_message(vk_session, 'user_id', event.user_id, message= "электроника и наноэлектроника", keyboard=keyboard)
+                if level[-1] == "бакалавриат и специалитет":
+                    send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("11.03.04")) + "\n"
+                                                                               "Проходной балл: " + str(score("11.03.04")) + "\n"
+                                                                               "Стоимость обучения: " + str(price("11.03.04")) + "\n"
+                                                                               "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("11.03.04")))
+                elif level[-1] == "магистратура":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_undergraduate("11.04.02")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_undergraduate("11.04.02")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_undergraduate("11.04.02")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_undergraduate("11.04.02")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_undergraduate("11.04.02")))
+                else:
+                    send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал уровень обучения.\n"
+                                                                               "Чтобы выбрать уровень обучения выбери: Информация по факультетам -> *Свой факультет* -> Как поступить?")
+            elif response == "физика и астрономия":
+                send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_graduate("03.06.01")) + "\n"
+                                                                           "КЦП бюджет: " + str(numbers1_graduate("03.06.01")) + "\n"
+                                                                           "КЦП целевые места: " + str(numbers2_graduate("03.06.01")) + "\n"
+                                                                           "КЦП внебюджет: " + str(numbers3_graduate("03.06.01")) + "\n"
+                                                                           "Вступительное испытание: " + str(exams_graduate("03.06.01")))
+            elif response == "электроника, радиоэлектроника и системы связи":
+                send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_graduate("11.06.01")) + "\n"
+                                                                           "КЦП бюджет: " + str(numbers1_graduate("11.06.01")) + "\n"
+                                                                           "КЦП целевые места: " + str(numbers2_graduate("11.06.01")) + "\n"
+                                                                           "КЦП внебюджет: " + str(numbers3_graduate("11.06.01")) + "\n"
+                                                                           "Вступительное испытание: " + str(exams_graduate("11.06.01")))
             elif response == "химия":
-                send_message(vk_session, 'user_id', event.user_id, message= "химия", keyboard=keyboard)
+                if level[-1] == "бакалавриат и специалитет":
+                    send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("04.03.01")) + "\n"
+                                                                               "Проходной балл: " + str(score("04.03.01")) + "\n"
+                                                                               "Стоимость обучения: " + str(price("04.03.01")) + "\n"
+                                                                               "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("04.03.01")))
+                elif level[-1] == "магистратура":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_undergraduate("04.04.01")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_undergraduate("04.04.01")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_undergraduate("04.04.01")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_undergraduate("04.04.01")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_undergraduate("04.04.01")))
+                else:
+                    send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал уровень обучения.\n"
+                                                                               "Чтобы выбрать уровень обучения выбери: Информация по факультетам -> *Свой факультет* -> Как поступить?")
             elif response == "биология":
-                send_message(vk_session, 'user_id', event.user_id, message= "биология", keyboard=keyboard)
+                if level[-1] == "бакалавриат и специалитет":
+                    send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("06.03.01")) + "\n"
+                                                                               "Проходной балл: " + str(score("06.03.01")) + "\n"
+                                                                               "Стоимость обучения: " + str(price("06.03.01")) + "\n"
+                                                                               "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("06.03.01")))
+                elif level[-1] == "магистратура":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_undergraduate("06.04.01")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_undergraduate("06.04.01")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_undergraduate("06.04.01")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_undergraduate("06.04.01")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_undergraduate("06.04.01")))
+                else:
+                    send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал уровень обучения.\n"
+                                                                               "Чтобы выбрать уровень обучения выбери: Информация по факультетам -> *Свой факультет* -> Как поступить?")
             elif response == "экология и природопользование":
-                send_message(vk_session, 'user_id', event.user_id, message= "экология и природопользование", keyboard=keyboard)
+                if level[-1] == "бакалавриат и специалитет":
+                    send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("05.03.06")) + "\n"
+                                                                               "Проходной балл: " + str(score("05.03.06")) + "\n"
+                                                                               "Стоимость обучения: " + str(price("05.03.06")) + "\n"
+                                                                               "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("05.03.06")))
+                elif level[-1] == "магистратура":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_undergraduate("05.04.06")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_undergraduate("05.04.06")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_undergraduate("05.04.06")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_undergraduate("05.04.06")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_undergraduate("05.04.06")))
+                else:
+                    send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал уровень обучения.\n"
+                                                                               "Чтобы выбрать уровень обучения выбери: Информация по факультетам -> *Свой факультет* -> Как поступить?")
+            elif response == "химические науки":
+                send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_graduate("04.06.01")) + "\n"
+                                                                           "КЦП бюджет: " + str(numbers1_graduate("04.06.01")) + "\n"
+                                                                           "КЦП целевые места: " + str(numbers2_graduate("04.06.01")) + "\n"
+                                                                           "КЦП внебюджет: " + str(numbers3_graduate("04.06.01")) + "\n"
+                                                                           "Вступительное испытание: " + str(exams_graduate("04.06.01")))
+            elif response == "биологические науки":
+                send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_graduate("06.06.01")) + "\n"
+                                                                           "КЦП бюджет: " + str(numbers1_graduate("06.06.01")) + "\n"
+                                                                           "КЦП целевые места: " + str(numbers2_graduate("06.06.01")) + "\n"
+                                                                           "КЦП внебюджет: " + str(numbers3_graduate("06.06.01")) + "\n"
+                                                                           "Вступительное испытание: " + str(exams_graduate("06.06.01")))
             elif response == "психология":
-                send_message(vk_session, 'user_id', event.user_id, message= "психология", keyboard=keyboard)
+                if level[-1] == "бакалавриат и специалитет":
+                    send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("37.03.01")) + "\n"
+                                                                               "Проходной балл: " + str(score("37.03.01")) + "\n"
+                                                                               "Стоимость обучения: " + str(price("37.03.01")) + "\n"
+                                                                               "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("37.03.01")))
+                elif level[-1] == "магистратура":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_undergraduate("37.04.01")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_undergraduate("37.04.01")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_undergraduate("37.04.01")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_undergraduate("37.04.01")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_undergraduate("37.04.01")))
+                else:
+                    send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал уровень обучения.\n"
+                                                                               "Чтобы выбрать уровень обучения выбери: Информация по факультетам -> *Свой факультет* -> Как поступить?")
+            elif response == "психолого-педагогическое образование":
+                send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_undergraduate("44.04.02")) + "\n"
+                                                                           "КЦП бюджет: " + str(numbers1_undergraduate("44.04.02")) + "\n"
+                                                                           "КЦП целевые места: " + str(numbers2_undergraduate("44.04.02")) + "\n"
+                                                                           "КЦП внебюджет: " + str(numbers3_undergraduate("44.04.02")) + "\n"
+                                                                           "Вступительное испытание: " + str(exams_undergraduate("44.04.02")))
+            elif response == "психологические науки":
+                send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_graduate("37.06.01")) + "\n"
+                                                                           "КЦП бюджет: " + str(numbers1_graduate("37.06.01")) + "\n"
+                                                                           "КЦП целевые места: " + str(numbers2_graduate("37.06.01")) + "\n"
+                                                                           "КЦП внебюджет: " + str(numbers3_graduate("37.06.01")) + "\n"
+                                                                           "Вступительное испытание: " + str(exams_graduate("37.06.01")))
             elif response == "экономика (бух. учёт, анализ и аудит)":
-                send_message(vk_session, 'user_id', event.user_id, message= "экономика (бух. учёт, анализ и аудит)", keyboard=keyboard)
+                if level[-1] == "бакалавриат и специалитет":
+                    send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("38.03.01")) + "\n"
+                                                                               "Проходной балл: " + str(score("38.03.01")) + "\n"
+                                                                               "Стоимость обучения: " + str(price("38.03.01")) + "\n"
+                                                                               "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("38.03.01")))
+                elif level[-1] == "магистратура":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_undergraduate("37.04.01")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_undergraduate("38.04.01")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_undergraduate("38.04.01")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_undergraduate("38.04.01")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_undergraduate("38.04.01")))
+                else:
+                    send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал уровень обучения.\n"
+                                                                               "Чтобы выбрать уровень обучения выбери: Информация по факультетам -> *Свой факультет* -> Как поступить?")
             elif response == "экономика (мировая экономика и международный бизнес)":
-                send_message(vk_session, 'user_id', event.user_id, message= "экономика (мировая экономика и международный бизнес)", keyboard=keyboard)
+                if level[-1] == "бакалавриат и специалитет":
+                    send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("38.03.01")) + "\n"
+                                                                               "Проходной балл: " + str(score("38.03.01")) + "\n"
+                                                                               "Стоимость обучения: " + str(price("38.03.01")) + "\n"
+                                                                               "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("38.03.01")))
+                elif level[-1] == "магистратура":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_undergraduate("38.04.01")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_undergraduate("38.04.01")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_undergraduate("38.04.01")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_undergraduate("38.04.01")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_undergraduate("38.04.01")))
+                else:
+                    send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал уровень обучения.\n"
+                                                                               "Чтобы выбрать уровень обучения выбери: Информация по факультетам -> *Свой факультет* -> Как поступить?")
             elif response == "экономика (финансы и кредит)":
-                send_message(vk_session, 'user_id', event.user_id, message= "экономика (финансы и кредит)", keyboard=keyboard)
+                if level[-1] == "бакалавриат и специалитет":
+                    send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("38.03.01")) + "\n"
+                                                                               "Проходной балл: " + str(score("38.03.01")) + "\n"
+                                                                               "Стоимость обучения: " + str(price("38.03.01")) + "\n"
+                                                                               "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("38.03.01")))
+                elif level[-1] == "магистратура":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_undergraduate("38.04.01")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_undergraduate("38.04.01")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_undergraduate("38.04.01")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_undergraduate("38.04.01")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_undergraduate("38.04.01")))
+                else:
+                    send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал уровень обучения.\n"
+                                                                               "Чтобы выбрать уровень обучения выбери: Информация по факультетам -> *Свой факультет* -> Как поступить?")
             elif response == "менеджмент":
-                send_message(vk_session, 'user_id', event.user_id, message= "менеджмент", keyboard=keyboard)
+                if level[-1] == "бакалавриат и специалитет":
+                    send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("38.03.02")) + "\n"
+                                                                               "Проходной балл: " + str(score("38.03.02")) + "\n"
+                                                                               "Стоимость обучения: " + str(price("38.03.02")) + "\n"
+                                                                               "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("38.03.02")))
+                elif level[-1] == "магистратура":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_undergraduate("38.04.02")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_undergraduate("38.04.02")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_undergraduate("38.04.02")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_undergraduate("38.04.02")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_undergraduate("38.04.02")))
+                else:
+                    send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал уровень обучения.\n"
+                                                                               "Чтобы выбрать уровень обучения выбери: Информация по факультетам -> *Свой факультет* -> Как поступить?")
             elif response == "государственное и муниципальное управление":
-                send_message(vk_session, 'user_id', event.user_id, message= "государственное и муниципальное управление", keyboard=keyboard)
+                if level[-1] == "бакалавриат и специалитет":
+                    send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("38.03.04")) + "\n"
+                                                                               "Проходной балл: " + str(score("38.03.04")) + "\n"
+                                                                               "Стоимость обучения: " + str(price("38.03.04")) + "\n"
+                                                                               "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("38.03.04")))
+                elif level[-1] == "магистратура":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_undergraduate("38.04.04")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_undergraduate("38.04.04")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_undergraduate("38.04.04")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_undergraduate("38.04.04")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_undergraduate("38.04.04")))
+                else:
+                    send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал уровень обучения.\n"
+                                                                               "Чтобы выбрать уровень обучения выбери: Информация по факультетам -> *Свой факультет* -> Как поступить?")
+            elif response == "Экономика (Экономическая теория)":
+                send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_graduate("38.06.01")) + "\n"
+                                                                           "КЦП бюджет: " + str(numbers1_graduate("38.06.01")) + "\n"
+                                                                           "КЦП целевые места: " + str(numbers2_graduate("38.06.01")) + "\n"
+                                                                           "КЦП внебюджет: " + str(numbers3_graduate("38.06.01")) + "\n"
+                                                                           "Вступительное испытание: " + str(exams_graduate("38.06.01")))
+            elif response == "Экономика (Экономика и управление народным хозяйством)":
+                send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_graduate("38.06.01")) + "\n"
+                                                                           "КЦП бюджет: " + str(numbers1_graduate("38.06.01")) + "\n"
+                                                                           "КЦП целевые места: " + str(numbers2_graduate("38.06.01")) + "\n"
+                                                                           "КЦП внебюджет: " + str(numbers3_graduate("38.06.01")) + "\n"
+                                                                           "Вступительное испытание: " + str(exams_graduate("38.06.01")))
+            elif response == "Экономика (Финансы, денежное обращение и кредит)":
+                send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_graduate("38.06.01")) + "\n"
+                                                                           "КЦП бюджет: " + str(numbers1_graduate("38.06.01")) + "\n"
+                                                                           "КЦП целевые места: " + str(numbers2_graduate("38.06.01")) + "\n"
+                                                                           "КЦП внебюджет: " + str(numbers3_graduate("38.06.01")) + "\n"
+                                                                           "Вступительное испытание: " + str(exams_graduate("38.06.01")))
+            elif response == "Экономика (Бухгалтерский учёт, статистика)":
+                send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_graduate("38.06.01")) + "\n"
+                                                                           "КЦП бюджет: " + str(numbers1_graduate("38.06.01")) + "\n"
+                                                                           "КЦП целевые места: " + str(numbers2_graduate("38.06.01")) + "\n"
+                                                                           "КЦП внебюджет: " + str(numbers3_graduate("38.06.01")) + "\n"
+                                                                           "Вступительное испытание: " + str(exams_graduate("38.06.01")))
+            elif response == "Экономика (Мировая экономика)":
+                send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_graduate("38.06.01")) + "\n"
+                                                                           "КЦП бюджет: " + str(numbers1_graduate("38.06.01")) + "\n"
+                                                                           "КЦП целевые места: " + str(numbers2_graduate("38.06.01")) + "\n"
+                                                                           "КЦП внебюджет: " + str(numbers3_graduate("38.06.01")) + "\n"
+                                                                           "Вступительное испытание: " + str(exams_graduate("38.06.01")))
             elif response == "социология":
-                send_message(vk_session, 'user_id', event.user_id, message= "социология", keyboard=keyboard)
+                if level[-1] == "бакалавриат и специалитет":
+                    send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("39.03.01")) + "\n"
+                                                                               "Проходной балл: " + str(score("39.03.01")) + "\n"
+                                                                               "Стоимость обучения: " + str(price("39.03.01")) + "\n"
+                                                                               "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("39.03.01")))
+                elif level[-1] == "магистратура":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_undergraduate("39.04.01")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_undergraduate("39.04.01")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_undergraduate("39.04.01")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_undergraduate("39.04.01")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_undergraduate("39.04.01")))
+                else:
+                    send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал уровень обучения.\n"
+                                                                               "Чтобы выбрать уровень обучения выбери: Информация по факультетам -> *Свой факультет* -> Как поступить?")
             elif response == "социальная работа":
-                send_message(vk_session, 'user_id', event.user_id, message= "социальная работа", keyboard=keyboard)
+                if level[-1] == "бакалавриат и специалитет":
+                    send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("39.03.02")) + "\n"
+                                                                               "Проходной балл: " + str(score("39.03.02")) + "\n"
+                                                                               "Стоимость обучения: " + str(price("39.03.02")) + "\n"
+                                                                               "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("39.03.02")))
+                elif level[-1] == "магистратура":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_undergraduate("39.04.02")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_undergraduate("39.04.02")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_undergraduate("39.04.02")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_undergraduate("39.04.02")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_undergraduate("39.04.02")))
+                else:
+                    send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал уровень обучения.\n"
+                                                                               "Чтобы выбрать уровень обучения выбери: Информация по факультетам -> *Свой факультет* -> Как поступить?")
             elif response == "социальная работа (заочная)":
-                send_message(vk_session, 'user_id', event.user_id, message= "социальная работа (заочная)", keyboard=keyboard)
+                send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("39.03.02")) + "\n"
+                                                                           "Проходной балл: " + str(score("39.03.02")) + "\n"
+                                                                           "Стоимость обучения: " + str(price("39.03.02")) + "\n"
+                                                                           "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("39.03.02")))
             elif response == "организация работы с молодёжью":
-                send_message(vk_session, 'user_id', event.user_id, message= "организация работы с молодёжью", keyboard=keyboard)
+                if level[-1] == "бакалавриат и специалитет":
+                    send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("39.03.03")) + "\n"
+                                                                               "Проходной балл: " + str(score("39.03.03")) + "\n"
+                                                                               "Стоимость обучения: " + str(price("39.03.03")) + "\n"
+                                                                               "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("39.03.03")))
+                elif level[-1] == "магистратура":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_undergraduate("39.04.02")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_undergraduate("39.04.02")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_undergraduate("39.04.02")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_undergraduate("39.04.02")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_undergraduate("39.04.02")))
+                else:
+                    send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал уровень обучения.\n"
+                                                                               "Чтобы выбрать уровень обучения выбери: Информация по факультетам -> *Свой факультет* -> Как поступить?")
             elif response == "организация работы с молодёжью (заочная)":
-                send_message(vk_session, 'user_id', event.user_id, message= "организация работы с молодёжью (заочная)", keyboard=keyboard)
+                send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("39.03.03")) + "\n"
+                                                                           "Проходной балл: " + str(score("39.03.03")) + "\n"
+                                                                           "Стоимость обучения: " + str(price("39.03.03")) + "\n"
+                                                                           "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("39.03.03")))
             elif response == "политология":
-                send_message(vk_session, 'user_id', event.user_id, message= "политология", keyboard=keyboard)
+                if level[-1] == "бакалавриат и специалитет":
+                    send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("41.03.03")) + "\n"
+                                                                               "Проходной балл: " + str(score("41.03.06")) + "\n"
+                                                                               "Стоимость обучения: " + str(price("41.03.06")) + "\n"
+                                                                               "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("41.03.06")))
+                elif level[-1] == "магистратура":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_undergraduate("41.04.04")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_undergraduate("41.04.04")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_undergraduate("41.04.04")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_undergraduate("41.04.04")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_undergraduate("41.04.04")))
+                else:
+                    send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал уровень обучения.\n"
+                                                                               "Чтобы выбрать уровень обучения выбери: Информация по факультетам -> *Свой факультет* -> Как поступить?")
             elif response == "публичная политика и социальные науки":
-                send_message(vk_session, 'user_id', event.user_id, message= "публичная политика и социальные науки", keyboard=keyboard)
+                send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("41.03.06")) + "\n"
+                                                                           "Проходной балл: " + str(score("41.03.06")) + "\n"
+                                                                           "Стоимость обучения: " + str(price("41.03.06")) + "\n"
+                                                                           "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("41.03.06")))
             elif response == "юриспруденция":
-                send_message(vk_session, 'user_id', event.user_id, message= "юриспруденция", keyboard=keyboard)
+                send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("40.03.01")) + "\n"
+                                                                           "Проходной балл: " + str(score("40.03.01")) + "\n"
+                                                                           "Стоимость обучения: " + str(price("40.03.01")) + "\n"
+                                                                           "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("40.03.01")))
             elif response == "юриспруденция (очно-заочная)":
-                send_message(vk_session, 'user_id', event.user_id, message= "юриспруденция (очно-заочная)", keyboard=keyboard)
+                send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("40.03.01")) + "\n"
+                                                                           "Проходной балл: " + str(score("40.03.01")) + "\n"
+                                                                           "Стоимость обучения: " + str(price("40.03.01")) + "\n"
+                                                                           "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("40.03.01")))
             elif response == "прикладная филология":
-                send_message(vk_session, 'user_id', event.user_id, message= "прикладная филология", keyboard=keyboard)
+                send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("45.03.01")) + "\n"
+                                                                           "Проходной балл: " + str(score("45.03.01")) + "\n"
+                                                                           "Стоимость обучения: " + str(price("45.03.01")) + "\n"
+                                                                           "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("45.03.01")))
             elif response == "зарубежная филология":
-                send_message(vk_session, 'user_id', event.user_id, message= "зарубежная филология", keyboard=keyboard)
+                send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("45.03.01")) + "\n"
+                                                                           "Проходной балл: " + str(score("45.03.01")) + "\n"
+                                                                           "Стоимость обучения: " + str(price("45.03.01")) + "\n"
+                                                                           "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("45.03.01")))
             elif response == "реклама и связи с общественностью":
-                send_message(vk_session, 'user_id', event.user_id, message= "реклама и связи с общественностью", keyboard=keyboard)
+                send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("42.03.01")) + "\n"
+                                                                           "Проходной балл: " + str(score("42.03.01")) + "\n"
+                                                                           "Стоимость обучения: " + str(price("42.03.01")) + "\n"
+                                                                           "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("42.03.01")))
             elif response == "туризм":
-                send_message(vk_session, 'user_id', event.user_id, message= "туризм", keyboard=keyboard)
+                if level[-1] == "бакалавриат и специалитет":
+                    send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("43.03.02")) + "\n"
+                                                                               "Проходной балл: " + str(score("43.03.02")) + "\n"
+                                                                               "Стоимость обучения: " + str(price("43.03.02")) + "\n"
+                                                                               "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("43.03.02")))
+                elif level[-1] == "магистратура":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_undergraduate("43.04.02")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_undergraduate("43.04.02")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_undergraduate("43.04.02")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_undergraduate("43.04.02")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_undergraduate("43.04.02")))
+                else:
+                    send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал уровень обучения.\n"
+                                                                               "Чтобы выбрать уровень обучения выбери: Информация по факультетам -> *Свой факультет* -> Как поступить?")
             elif response == "история":
-                send_message(vk_session, 'user_id', event.user_id, message= "история", keyboard=keyboard)
-
-            elif response == "количество бюджетных мест":
-                if faculty[-1] == "математический" and direction[-1] == "прикладная математика и информатика":
-                    send_message(vk_session, 'user_id', event.user_id, message= "50", keyboard=keyboard)
-                elif direction[-1] == "математика и компьютерные науки":
-                    send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                elif direction[-1] == "информационная безопасность":
-                    send_message(vk_session, 'user_id', event.user_id, message= "20", keyboard=keyboard)
-                elif direction[-1] == "компьютерная безопасность":
-                    send_message(vk_session, 'user_id', event.user_id, message= "29", keyboard=keyboard)
-                elif faculty[-1] == "ивт" and direction[-1] == "прикладная математика и информатика":
-                    send_message(vk_session, 'user_id', event.user_id, message= "50", keyboard=keyboard)
-                elif direction[-1] == "фундаментальная информатика и информационные технологии":
-                    send_message(vk_session, 'user_id', event.user_id, message= "45", keyboard=keyboard)
-                elif direction[-1] == "прикладная информаиика в экономике":
-                    send_message(vk_session, 'user_id', event.user_id, message= "20", keyboard=keyboard)
-                elif direction[-1] == "физика":
-                    send_message(vk_session, 'user_id', event.user_id, message= "14", keyboard=keyboard)
-                elif direction[-1] == "радиофизика":
-                    send_message(vk_session, 'user_id', event.user_id, message= "20", keyboard=keyboard)
-                elif direction[-1] == "радиотехника":
-                    send_message(vk_session, 'user_id', event.user_id, message= "18", keyboard=keyboard)
-                elif direction[-1] == "инфокоммуникационные технологии и системы связи":
-                    send_message(vk_session, 'user_id', event.user_id, message= "30", keyboard=keyboard)
-                elif direction[-1] == "электроника и наноэлектроника":
-                    send_message(vk_session, 'user_id', event.user_id, message= "30", keyboard=keyboard)
-                elif direction[-1] == "химия":
-                    send_message(vk_session, 'user_id', event.user_id, message= "30", keyboard=keyboard)
-                elif direction[-1] == "биология":
-                    send_message(vk_session, 'user_id', event.user_id, message= "50", keyboard=keyboard)
-                elif direction[-1] == "экология и природопользование":
-                    send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                elif direction[-1] == "психология":
-                    send_message(vk_session, 'user_id', event.user_id, message= "24", keyboard=keyboard)
-                elif direction[-1] == "экономика (бух. учёт, анализ и аудит)":
-                    send_message(vk_session, 'user_id', event.user_id, message= "7", keyboard=keyboard)
-                elif direction[-1] == "экономика (мировая экономика и международный бизнес)":
-                    send_message(vk_session, 'user_id', event.user_id, message= "7", keyboard=keyboard)
-                elif direction[-1] == "экономика (финансы и кредит)":
-                    send_message(vk_session, 'user_id', event.user_id, message= "7", keyboard=keyboard)
-                elif direction[-1] == "менеджмент":
-                    send_message(vk_session, 'user_id', event.user_id, message= "7", keyboard=keyboard)
-                elif direction[-1] == "государственное и муниципальное управление":
-                    send_message(vk_session, 'user_id', event.user_id, message= "7", keyboard=keyboard)
-                elif direction[-1] == "социология":
-                    send_message(vk_session, 'user_id', event.user_id, message= "15", keyboard=keyboard)
-                elif direction[-1] == "социальная работа":
-                    send_message(vk_session, 'user_id', event.user_id, message= "14", keyboard=keyboard)
-                elif direction[-1] == "социальная работа (заочная)":
-                    send_message(vk_session, 'user_id', event.user_id, message= "9", keyboard=keyboard)
-                elif direction[-1] == "организация работы с молодёжью":
-                    send_message(vk_session, 'user_id', event.user_id, message= "14", keyboard=keyboard)
-                elif direction[-1] == "организация работы с молодёжью (заочная)":
-                    send_message(vk_session, 'user_id', event.user_id, message= "9", keyboard=keyboard)
-                elif direction[-1] == "политология":
-                    send_message(vk_session, 'user_id', event.user_id, message= "10", keyboard=keyboard)
-                elif direction[-1] == "публичная политика и социальные науки":
-                    send_message(vk_session, 'user_id', event.user_id, message= "7", keyboard=keyboard)
-                elif direction[-1] == "юриспруденция":
-                    send_message(vk_session, 'user_id', event.user_id, message= "28", keyboard=keyboard)
-                elif direction[-1] == "юриспруденция (очно-заочная)":
-                    send_message(vk_session, 'user_id', event.user_id, message= "29", keyboard=keyboard)
-                elif direction[-1] == "прикладная филология":
-                    send_message(vk_session, 'user_id', event.user_id, message= "8", keyboard=keyboard)
-                elif direction[-1] == "зарубежная филология":
-                    send_message(vk_session, 'user_id', event.user_id, message= "7", keyboard=keyboard)
-                elif direction[-1] == "реклама и связи с общественностью":
-                    send_message(vk_session, 'user_id', event.user_id, message= "-", keyboard=keyboard)
-                elif direction[-1] == "туризм":
-                    send_message(vk_session, 'user_id', event.user_id, message= "21", keyboard=keyboard)
-                elif direction[-1] == "история":
-                    send_message(vk_session, 'user_id', event.user_id, message= "27", keyboard=keyboard)
-
-            elif response == "проходной балл":
-                if faculty[-1] == "математический" and direction[-1] == "прикладная математика и информатика":
-                    send_message(vk_session, 'user_id', event.user_id, message= "219", keyboard=keyboard)
-                elif direction[-1] == "математика и компьютерные науки":
-                    send_message(vk_session, 'user_id', event.user_id, message= "212", keyboard=keyboard)
-                elif direction[-1] == "информационная безопасность":
-                    send_message(vk_session, 'user_id', event.user_id, message= "226", keyboard=keyboard)
-                elif direction[-1] == "компьютерная безопасность":
-                    send_message(vk_session, 'user_id', event.user_id, message= "230", keyboard=keyboard)
-                elif faculty[-1] == "ивт" and direction[-1] == "прикладная математика и информатика":
-                    send_message(vk_session, 'user_id', event.user_id, message= "231", keyboard=keyboard)
-                elif direction[-1] == "фундаментальная информатика и информационные технологии":
-                    send_message(vk_session, 'user_id', event.user_id, message= "233", keyboard=keyboard)
-                elif direction[-1] == "прикладная информаиика в экономике":
-                    send_message(vk_session, 'user_id', event.user_id, message= "230", keyboard=keyboard)
-                elif direction[-1] == "физика":
-                    send_message(vk_session, 'user_id', event.user_id, message= "179", keyboard=keyboard)
-                elif direction[-1] == "радиофизика":
-                    send_message(vk_session, 'user_id', event.user_id, message= "183", keyboard=keyboard)
-                elif direction[-1] == "радиотехника":
-                    send_message(vk_session, 'user_id', event.user_id, message= "181", keyboard=keyboard)
-                elif direction[-1] == "инфокоммуникационные технологии и системы связи":
-                    send_message(vk_session, 'user_id', event.user_id, message= "176", keyboard=keyboard)
-                elif direction[-1] == "электроника и наноэлектроника":
-                    send_message(vk_session, 'user_id', event.user_id, message= "187", keyboard=keyboard)
-                elif direction[-1] == "химия":
-                    send_message(vk_session, 'user_id', event.user_id, message= "202", keyboard=keyboard)
-                elif direction[-1] == "биология":
-                    send_message(vk_session, 'user_id', event.user_id, message= "198", keyboard=keyboard)
-                elif direction[-1] == "экология и природопользование":
-                    send_message(vk_session, 'user_id', event.user_id, message= "183", keyboard=keyboard)
-                elif direction[-1] == "психология":
-                    send_message(vk_session, 'user_id', event.user_id, message= "211", keyboard=keyboard)
-                elif direction[-1] == "экономика (бух. учёт, анализ и аудит)":
-                    send_message(vk_session, 'user_id', event.user_id, message= "240", keyboard=keyboard)
-                elif direction[-1] == "экономика (мировая экономика и международный бизнес)":
-                    send_message(vk_session, 'user_id', event.user_id, message= "240", keyboard=keyboard)
-                elif direction[-1] == "экономика (финансы и кредит)":
-                    send_message(vk_session, 'user_id', event.user_id, message= "240", keyboard=keyboard)
-                elif direction[-1] == "менеджмент":
-                    send_message(vk_session, 'user_id', event.user_id, message= "243", keyboard=keyboard)
-                elif direction[-1] == "государственное и муниципальное управление":
-                    send_message(vk_session, 'user_id', event.user_id, message= "240", keyboard=keyboard)
-                elif direction[-1] == "социология":
-                    send_message(vk_session, 'user_id', event.user_id, message= "227", keyboard=keyboard)
-                elif direction[-1] == "социальная работа":
-                    send_message(vk_session, 'user_id', event.user_id, message= "202", keyboard=keyboard)
-                elif direction[-1] == "социальная работа (заочная)":
-                    send_message(vk_session, 'user_id', event.user_id, message= "177", keyboard=keyboard)
-                elif direction[-1] == "организация работы с молодёжью":
-                    send_message(vk_session, 'user_id', event.user_id, message= "202", keyboard=keyboard)
-                elif direction[-1] == "организация работы с молодёжью (заочная)":
-                    send_message(vk_session, 'user_id', event.user_id, message= "184", keyboard=keyboard)
-                elif direction[-1] == "политология":
-                    send_message(vk_session, 'user_id', event.user_id, message= "210", keyboard=keyboard)
-                elif direction[-1] == "публичная политика и социальные науки":
-                    send_message(vk_session, 'user_id', event.user_id, message= "218", keyboard=keyboard)
-                elif direction[-1] == "юриспруденция":
-                    send_message(vk_session, 'user_id', event.user_id, message= "250", keyboard=keyboard)
-                elif direction[-1] == "юриспруденция (очно-заочная)":
-                    send_message(vk_session, 'user_id', event.user_id, message= "203", keyboard=keyboard)
-                elif direction[-1] == "прикладная филология":
-                    send_message(vk_session, 'user_id', event.user_id, message= "232", keyboard=keyboard)
-                elif direction[-1] == "зарубежная филология":
-                    send_message(vk_session, 'user_id', event.user_id, message= "261", keyboard=keyboard)
-                elif direction[-1] == "реклама и связи с общественностью":
-                    send_message(vk_session, 'user_id', event.user_id, message= "-", keyboard=keyboard)
-                elif direction[-1] == "туризм":
-                    send_message(vk_session, 'user_id', event.user_id, message= "222", keyboard=keyboard)
-                elif direction[-1] == "история":
-                    send_message(vk_session, 'user_id', event.user_id, message= "225", keyboard=keyboard)
-
-            elif response == "стоимость обучения":
-                if faculty[-1] == "математический" and direction[-1] == "прикладная математика и информатика":
-                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
-                elif direction[-1] == "математика и компьютерные науки":
-                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
-                elif direction[-1] == "информационная безопасность":
-                    send_message(vk_session, 'user_id', event.user_id, message= "132802", keyboard=keyboard)
-                elif direction[-1] == "компьютерная безопасность":
-                    send_message(vk_session, 'user_id', event.user_id, message= "-", keyboard=keyboard)
-                elif faculty[-1] == "ивт" and direction[-1] == "прикладная математика и информатика":
-                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
-                elif direction[-1] == "фундаментальная информатика и информационные технологии":
-                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
-                elif direction[-1] == "прикладная информаиика в экономике":
-                    send_message(vk_session, 'user_id', event.user_id, message= "132802", keyboard=keyboard)
-                elif direction[-1] == "физика":
-                    send_message(vk_session, 'user_id', event.user_id, message= "132802", keyboard=keyboard)
-                elif direction[-1] == "радиофизика":
-                    send_message(vk_session, 'user_id', event.user_id, message= "132802", keyboard=keyboard)
-                elif direction[-1] == "радиотехника":
-                    send_message(vk_session, 'user_id', event.user_id, message= "132802", keyboard=keyboard)
-                elif direction[-1] == "инфокоммуникационные технологии и системы связи":
-                    send_message(vk_session, 'user_id', event.user_id, message= "132802 (оч.) / 62181 (заоч.)", keyboard=keyboard)
-                elif direction[-1] == "электроника и наноэлектроника":
-                    send_message(vk_session, 'user_id', event.user_id, message= "132802", keyboard=keyboard)
-                elif direction[-1] == "химия":
-                    send_message(vk_session, 'user_id', event.user_id, message= "132802", keyboard=keyboard)
-                elif direction[-1] == "биология":
-                    send_message(vk_session, 'user_id', event.user_id, message= "132802", keyboard=keyboard)
-                elif direction[-1] == "экология и природопользование":
-                    send_message(vk_session, 'user_id', event.user_id, message= "132802", keyboard=keyboard)
-                elif direction[-1] == "психология":
-                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
-                elif direction[-1] == "экономика (бух. учёт, анализ и аудит)":
-                    send_message(vk_session, 'user_id', event.user_id, message= "128097 (оч.) / 58097 (заоч.)", keyboard=keyboard)
-                elif direction[-1] == "экономика (мировая экономика и международный бизнес)":
-                    send_message(vk_session, 'user_id', event.user_id, message= "128097", keyboard=keyboard)
-                elif direction[-1] == "экономика (финансы и кредит)":
-                    send_message(vk_session, 'user_id', event.user_id, message= "128097", keyboard=keyboard)
-                elif direction[-1] == "менеджмент":
-                    send_message(vk_session, 'user_id', event.user_id, message= "128097 (оч.) / 58097 (заоч.)", keyboard=keyboard)
-                elif direction[-1] == "государственное и муниципальное управление":
-                    send_message(vk_session, 'user_id', event.user_id, message= "128097 (оч.) / 58097 (заоч.)", keyboard=keyboard)
-                elif direction[-1] == "социология":
-                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
-                elif direction[-1] == "социальная работа":
-                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
-                elif direction[-1] == "социальная работа (заочная)":
-                    send_message(vk_session, 'user_id', event.user_id, message= "49749", keyboard=keyboard)
-                elif direction[-1] == "организация работы с молодёжью":
-                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
-                elif direction[-1] == "организация работы с молодёжью (заочная)":
-                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
-                elif direction[-1] == "политология":
-                    send_message(vk_session, 'user_id', event.user_id, message= "120628", keyboard=keyboard)
-                elif direction[-1] == "публичная политика и социальные науки":
-                    send_message(vk_session, 'user_id', event.user_id, message= "73327", keyboard=keyboard)
-                elif direction[-1] == "юриспруденция":
-                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
-                elif direction[-1] == "юриспруденция (очно-заочная)":
-                    send_message(vk_session, 'user_id', event.user_id   , message= "114738", keyboard=keyboard)
-                elif direction[-1] == "прикладная филология":
-                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
-                elif direction[-1] == "зарубежная филология":
-                    send_message(vk_session, 'user_id', event.user_id, message= "114738 (оч.) / 55164 (заоч.)", keyboard=keyboard)
-                elif direction[-1] == "реклама и связи с общественностью":
-                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
-                elif direction[-1] == "туризм":
-                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
-                elif direction[-1] == "история":
-                    send_message(vk_session, 'user_id', event.user_id, message= "114738", keyboard=keyboard)
-
-            elif response == "способы подачи документов":
-                send_message(vk_session, 'user_id', event.user_id, message= "Способы подачи документов", keyboard=keyboard)
-
+                if level[-1] == "бакалавриат и специалитет":
+                    send_message(vk_session, 'user_id', event.user_id, message="Количество бюджетных мест: " + str(count("46.03.01")) + "\n"
+                                                                               "Проходной балл: " + str(score("46.03.01")) + "\n"
+                                                                               "Стоимость обучения: " + str(price("46.03.01")) + "\n"
+                                                                               "Вступительные испытания (ЕГЭ): " + str(exams_bachelor("46.03.01")))
+                elif level[-1] == "магистратура":
+                    send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_undergraduate("46.04.01")) + "\n"
+                                                                               "КЦП бюджет: " + str(numbers1_undergraduate("46.04.01")) + "\n"
+                                                                               "КЦП целевые места: " + str(numbers2_undergraduate("46.04.01")) + "\n"
+                                                                               "КЦП внебюджет: " + str(numbers3_undergraduate("46.04.01")) + "\n"
+                                                                               "Вступительное испытание: " + str(exams_undergraduate("46.04.01")))
+                else:
+                    send_message(vk_session, 'user_id', event.user_id, message="Ты не выбрал уровень обучения.\n"
+                                                                               "Чтобы выбрать уровень обучения выбери: Информация по факультетам -> *Свой факультет* -> Как поступить?")
+            elif response == "исторические науки и археология":
+                send_message(vk_session, 'user_id', event.user_id, message="Наименование направленности: " + str(focuses_graduate("46.06.01")) + "\n"
+                                                                           "КЦП бюджет: " + str(numbers1_graduate("46.06.01")) + "\n"
+                                                                           "КЦП целевые места: " + str(numbers2_graduate("46.06.01")) + "\n"
+                                                                           "КЦП внебюджет: " + str(numbers3_graduate("46.06.01")) + "\n"
+                                                                           "Вступительное испытание: " + str(exams_graduate("46.06.01")))
             elif response == "лично":
                 send_message(vk_session, 'user_id', event.user_id, message= "Приемная комиссия работает по адресу: Ярославль, ул. Кирова, д. 8/10.", keyboard=keyboard)
                 send_message(vk_session, 'user_id', event.user_id, message= "   с понедельника по пятницу с 9.00 до 16.00,", keyboard=keyboard)
@@ -981,49 +939,36 @@ for event in longpoll.listen():
             elif response == "вопрос":
                 send_message(vk_session, 'user_id', event.user_id, message= "Зайдайте мне вопрос. Я отвечу в течение дня.", keyboard=keyboard)
 
-            elif response == "приёмная комиссия":
-                send_message(vk_session, 'user_id', event.user_id, message= 'Приёмная комиссия:', keyboard=keyboard)
-
-            elif response == "информация для абитуриентов":
-                send_message(vk_session, 'user_id', event.user_id, message= 'Информация для абитуриентов:', keyboard=keyboard)
-
-            elif response == "контакты приёмной комиссии":
-                send_message(vk_session, 'user_id', event.user_id, message= 'Контакты приёмной комиссии:', keyboard=keyboard)
-
-            elif response == "адрес":
-                send_message(vk_session, 'user_id', event.user_id, message="150000, г. Ярославль, ул.Кирова 8/10, каб. 102", keyboard=keyboard)
-                send_message(vk_session, 'user_id', event.user_id, message='Как до нас добраться:', keyboard=keyboard)
-                send_message(vk_session, 'user_id', event.user_id, message=' Проезд от вокзала «Ярославль-Главный» троллейбусом №1 до остановки «пл. Волкова» или Любым видом общественного транспорта до остановки «пл. Богоявления»', keyboard=keyboard)
-
-            elif response == "телефон":
-                send_message(vk_session, 'user_id', event.user_id, message= '+7(4852)30-32-10, 78-85-33', keyboard=keyboard)
-
-            elif response == "email":
-                send_message(vk_session, 'user_id', event.user_id, message= 'priem@uniyar.ac.ru', keyboard=keyboard)
-
-            elif response == "skype":
-                send_message(vk_session, 'user_id', event.user_id, message= 'priem_YarGU', keyboard=keyboard)
-
-            elif response == "телефон (для иностранных граждан)":
-                send_message(vk_session, 'user_id', event.user_id, message= '+7(4852)79-77-45, 79-77-46', keyboard=keyboard)
-
-            elif response == "email (для иностранных граждан)":
-                send_message(vk_session, 'user_id', event.user_id, message= 'depint@uniyar.ac.ru', keyboard=keyboard)
-
-            elif response == "информация по факультетам":
-                send_message(vk_session, 'user_id', event.user_id, message= 'Факультеты:', keyboard=keyboard)
-
             elif response == "узнать свой рейтинг":
-                send_message(vk_session, 'user_id', event.user_id, message= full_info('Дык Фам'))
+                if is_saved:
+                    send_message(vk_session, 'user_id', event.user_id, message=full_info(saved_name), keyboard=keyboard)
+                else:
+                    send_message(vk_session, 'user_id', event.user_id, message='Введите ваше имя:')
+                    name_field = True
+
+            elif name_field == True:
+                send_message(vk_session, 'user_id', event.user_id, message=full_info(response))
+                if full_info(response) != 'Имя не в списке':
+                    send_message(vk_session, 'user_id', event.user_id, message='Сохранить имя?', keyboard=keyboard)
+                saved_name = response
+                name_field = False
+                answer_field = True
+
+            elif answer_field == True:
+                if response == "да":
+                    send_message(vk_session, 'user_id', event.user_id, message='Ваше имя сохранено', keyboard=keyboard)
+                    is_saved = True
+                    answer_field = False
+                elif response == "нет":
+                    send_message(vk_session, 'user_id', event.user_id, message='Ладно.', keyboard=keyboard)
+                    answer_field = False
+
+            elif response == "изменить":
+                send_message(vk_session, 'user_id', event.user_id, message='Введите ваше имя:')
+                name_field = True
 
             elif response == "специальности":
                 send_message(vk_session, 'user_id', event.user_id, message= 'Специальности:', keyboard=keyboard)
-
-            elif response == "общая информация":
-                send_message(vk_session, 'user_id', event.user_id, message= 'Общая информация:', keyboard=keyboard)
-
-            elif response == "информация по факультетам":
-                send_message(vk_session, 'user_id', event.user_id, message= 'Выберите факультет:', keyboard=keyboard)
 
             elif response == "экономический":
                 send_message(vk_session, 'user_id', event.user_id, message= 'Экономический:', keyboard=keyboard)
@@ -1062,7 +1007,7 @@ for event in longpoll.listen():
                 send_message(vk_session, 'user_id', event.user_id, message= 'Университетский колледж:', keyboard=keyboard)
 
             elif response == "как поступить?":
-                send_message(vk_session, 'user_id', event.user_id, message= 'Как поступить:', keyboard=keyboard)
+                send_message(vk_session, 'user_id', event.user_id, message= 'Выберите уровень обучения:', keyboard=keyboard)
 
             elif response == "направления":
                 send_message(vk_session, 'user_id', event.user_id, message= 'Выберите уровень обучения', keyboard=keyboard)
