@@ -1,3 +1,11 @@
 # admission-helper
 VK bot for assistance in enrolling in P.G. Demidov University
-ЕСЛИ ТЫ ХОЧЕШЬ НОРМАЛЬНО ИМ ПОЛЬЗОВАТЬСЯ ИМПОРТИРУЙ VK_API, NLTK, PANDAS, TENSORFLOW, KERAS, SECRET, PYASPELLER, POMORPHY2. ТОГДА ТВОЯ ЖИЗНЬ ТОЧНО НАЛАДИТСЯ
+
+ВК-бот для помощи при поступлении в ЯрГУ
+
+**Для установки всех нужных модулей введи команду**
+
+Windows:
+    pip install -r requirements.txt
+Linux/Mac:
+    pip3 install -r requirements.txt

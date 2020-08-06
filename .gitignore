@@ -29,4 +29,7 @@ MANIFEST
 # mkdocs documentation
 /site
 
-secret.py
+config.py
+/.idea
+/.vscode
+/env

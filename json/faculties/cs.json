@@ -1,0 +1,148 @@
+{
+    "text": "ИВТ",
+    "keyboard_color": "PRIMARY",
+    "children": [
+        {
+            "text": "Как поступить",
+            "keyboard_color": "NEGATIVE",
+            "children": [
+                {
+                    "text": "Бакалавриат",
+                    "keyboard_color": "PRIMARY",
+                    "children": [
+                        {
+                            "text": "Прикладная математика и информатика",
+                            "keyboard_color": "PRIMARY"
+                        },
+                        {
+                            "text": "Фундаментальная информатика и ит",
+                            "keyboard_color": "PRIMARY"
+                        },
+                        {
+                            "text": "Прикладная информатика в экономике",
+                            "keyboard_color": "PRIMARY"
+                        },
+                        {
+                            "text": "Компьютерная безопасность",
+                            "keyboard_color": "PRIMARY"
+                        },
+                        {
+                            "text": "Назад",
+                            "keyboard_color": "DEFAULT"
+                        }
+                    ]
+                },
+                {
+                    "text": "Магистратура",
+                    "keyboard_color": "PRIMARY",
+                    "children": [
+                        {
+                            "text": "Прикладная математика и информатика",
+                            "keyboard_color": "PRIMARY"
+                        },
+                        {
+                            "text": "Фундаментальная информатика и ит",
+                            "keyboard_color": "PRIMARY"
+                        },
+                        {
+                            "text": "Прикладная информатика",
+                            "keyboard_color": "PRIMARY"
+                        },
+                        {
+                            "text": "Назад",
+                            "keyboard_color": "DEFAULT"
+                        }
+                    ]
+                },
+                {
+                    "text": "Аспирантура",
+                    "keyboard_color": "PRIMARY",
+                    "children": [
+                        {
+                            "text": "Математика и механика",
+                            "keyboard_color": "PRIMARY"
+                        },
+                        {
+                            "text": "Компьютерные и информационные науки",
+                            "keyboard_color": "PRIMARY"
+                        },
+                        {
+                            "text": "Информатика и вычислительная техника",
+                            "keyboard_color": "PRIMARY"
+                        },
+                        {
+                            "text": "Назад",
+                            "keyboard_color": "DEFAULT"
+                        }
+                    ]
+                },
+                {
+                    "text": "Назад",
+                    "keyboard_color": "DEFAULT"
+                }
+            ]
+        },
+        {
+            "text": "Кафедры",
+            "keyboard_color": "POSITIVE",
+                "children": [
+                    {
+                        "text": "Дискретного анализа",
+                        "keyboard_color": "PRIMARY"
+                    },
+                    {
+                        "text": "Компьютерных сетей",
+                        "keyboard_color": "PRIMARY"
+                    },
+                    {
+                        "text": "Теоретической информатики",
+                        "keyboard_color": "PRIMARY"
+                    },
+                    {
+                        "text": "Вычислительных и программных систем",
+                        "keyboard_color": "PRIMARY"
+                    },
+                    {
+                        "text": "Информационных и сетевых технологий",
+                        "keyboard_color": "PRIMARY"
+                    },
+                    {
+                        "text": "Разработки облачных сервисов в Тензоре",
+                        "keyboard_color": "PRIMARY"
+                    },
+                    {
+                        "text": "Разработки цифровых платформ в Кристе",
+                        "keyboard_color": "PRIMARY"
+                    },
+                    {
+                        "text": "Назад",
+                        "keyboard_color": "DEFAULT"
+                    }
+                ]
+        },
+        {
+            "text": "Где работать",
+            "keyboard_color": "POSITIVE"
+        },
+        {
+            "text": "История факультета",
+            "keyboard_color": "PRIMARY"
+        },
+        {
+            "text": "Кафедры",
+            "keyboard_color": "PRIMARY"
+        },
+        {
+            "text": "Контакты",
+            "keyboard_color": "PRIMARY"
+        },
+        {
+            "text": "Подписаться на рассылку",
+            "keyboard_color": "PRIMARY"
+        },
+        {
+            "text": "Назад",
+            "keyboard_color": "DEFAULT"
+        }
+    ]
+}
