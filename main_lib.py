@@ -11,4 +11,4 @@ from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 # from memo import *
 # from commands import *
 from config import token
-from chat_bot.chat_bot import get_model, start
+from chat_bot.main import get_model, start

@@ -1,6 +1,6 @@
-from my_lib import *
+from chat_bot.my_lib import *
 
-from model import create_model
+from chat_bot.model import create_model
 from chat_bot.correct import correct_msg
 
 words = []

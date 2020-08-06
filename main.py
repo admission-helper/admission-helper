@@ -1,9 +1,9 @@
 from main_lib import *
 
-with open("json/structure.json", "r", encoding="utf-8") as data_file:
+with open("data/structure.json", "r", encoding="utf-8") as data_file:
     commands = json.load(data_file)
 
-path = 'json/faculties'
+path = 'data/faculties'
 faculties = os.listdir(path)
 
 for faculty in faculties:
