@@ -6,6 +6,6 @@ VK bot for assistance in enrolling in P.G. Demidov University
 **Для установки всех нужных модулей введи команду**
 
 Windows:
-    pip install -r requirements.txt
+    pip install -r requirements.txt  
 Linux/Mac:
     pip3 install -r requirements.txt
