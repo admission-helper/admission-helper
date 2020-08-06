@@ -31,5 +31,4 @@ MANIFEST
 
 config.py
 /.idea
-/.vscode
-/env
+/venv

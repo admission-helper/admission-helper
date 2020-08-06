@@ -1,6 +1,6 @@
-from chat_bot.my_lib import *
+from my_lib import *
 
-from chat_bot.model import create_model
+from model import create_model
 from chat_bot.correct import correct_msg
 
 words = []
@@ -8,7 +8,7 @@ classes = []
 documents = []
 ignore_words = stopwords.words("russian")
 
-with open("json/intents.json", "r", encoding="utf-8") as data_file:
+with open("data/intents.json", "r", encoding="utf-8") as data_file:
     intents = json.load(data_file)
 
 lemmatizer = WordNetLemmatizer()
@@ -30,8 +30,8 @@ words = [lemmatizer.lemmatize(w.lower()) for w in words if w not in ignore_words
 words = sorted(list(set(words)))
 classes = sorted(list(set(classes)))
 
-pickle.dump(words,open('words.pkl', 'wb'))
-pickle.dump(classes,open('classes.pkl', 'wb'))
+pickle.dump(words,open('model/words.pkl', 'wb'))
+pickle.dump(classes,open('model/classes.pkl', 'wb'))
 
 # training data
 training = []
@@ -60,7 +60,7 @@ train_x = list(training[:,0])
 train_y = list(training[:,1])
 
 def get_model():
-    name = 'chatbot_model.h5'
+    name = 'model/chatbot_model.h5'
     if (os.path.exists('./' + name)):
         return load_model(name)
     else:
