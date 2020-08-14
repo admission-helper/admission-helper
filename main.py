@@ -1,50 +1,43 @@
 from main_lib import *
 
-with open("data/structure.json", "r", encoding="utf-8") as data_file:
-    commands = json.load(data_file)
+def json_commands():
+    with open("data/structure.json", "r", encoding="utf-8") as data_file:
+        commands = json.load(data_file)
 
-path = 'data/faculties'
-faculties = os.listdir(path)
+    path = 'data/faculties'
+    faculties = os.listdir(path)
 
-for faculty in faculties:
-    with open(path + '/' + faculty, "r", encoding="utf-8") as data_file:
-        part = json.load(data_file)
-    commands['children'][1]['children'].append(part)
+    for faculty in faculties:
+        with open(path + '/' + faculty, "r", encoding="utf-8") as data_file:
+            part = json.load(data_file)
+        commands['children'][1]['children'].append(part)
+    
+    return commands
 
-def extract_values(obj, value):
-    """Pull all values of specified value from nested JSON."""
-    arr = []
+def response_search(json, response):
+    ans = [] # найденные значения
 
-    def extract(obj, arr, value):
-        """Recursively search for values of value in JSON tree."""
-        if isinstance(obj, dict):
-            for k, v in obj.items():
+    def extract(json, ans, response):
+        """Рекурсивный поиск значений в JSON"""
+        if isinstance(json, dict):
+            for k, v in json.items():
                 if isinstance(v, (dict, list)):
-                    extract(v, arr, value)
-                elif k == 'text' and v.lower() == value:
-                    arr.extend(obj['children'])
-        elif isinstance(obj, list):
-            for item in obj:
-                extract(item, arr, value)
-        return arr
+                    extract(v, ans, response)
+                elif k == 'text' and v.lower() == response:
+                    ans.extend(json['children'])
+        elif isinstance(json, list):
+            for item in json:
+                extract(item, ans, response)
+        return ans
 
-    results = extract(obj, arr, value)
+    results = extract(json, ans, response)
     return results
 
-
-vk_session = vk_api.VkApi(token=token)
-session_api = vk_session.get_api()
-longpoll = VkLongPoll(vk_session)
-
 def create_keyboard(keyboard, response):
-    messages = extract_values(commands, response)
+    commands = json_commands()
+    messages = response_search(commands, response)
     intents = []
-    vk_colors = {
-        'POSITIVE': VkKeyboardColor.POSITIVE,
-        'NEGATIVE': VkKeyboardColor.NEGATIVE,
-        'PRIMARY': VkKeyboardColor.PRIMARY,
-        'DEFAULT': VkKeyboardColor.DEFAULT
-        }
+
     for message in messages:
         intents.append(message['text'])
         cur_color = message['keyboard_color']
@@ -64,22 +57,27 @@ def send_message(vk_session, id_type, id, message=None, attachment=None, keyboar
         "attachment": attachment, 'keyboard': keyboard
         })
 
-for event in longpoll.listen():
-    if event.type == VkEventType.MESSAGE_NEW:
-        response = event.text.lower()
-        
-        keyboard = VkKeyboard(one_time=False)
-        keyboard = create_keyboard(keyboard, response)
+def chat_start():
+    vk_session = vk_api.VkApi(token=token)
+    session_api = vk_session.get_api()
+    longpoll = VkLongPoll(vk_session)
 
-        messages = extract_values(commands, response)
+    for event in longpoll.listen():
+        if event.type == VkEventType.MESSAGE_NEW:
+            response = event.text.lower()
 
-        if event.from_user and not event.from_me:
-            if messages:
-                response = response.capitalize()
-                send_message(vk_session, 'user_id', event.user_id, message=response, keyboard=keyboard.get_keyboard())
-                print(messages)
-            else:
-                model = get_model()
-                send_message(vk_session, 'user_id', event.user_id, message=start(response, model))
-            
-        
+            keyboard = VkKeyboard()
+            keyboard = create_keyboard(keyboard, response)
+
+            commands = json_commands()
+            messages = response_search(commands, response)
+
+            if event.from_user and not event.from_me:
+                if messages:
+                    response = response.capitalize()
+                    send_message(vk_session, 'user_id', event.user_id, message=response, keyboard=keyboard.get_keyboard())
+                else:
+                    model = get_model()
+                    send_message(vk_session, 'user_id', event.user_id, message=chatbot_response(response, model))
+
+chat_start()

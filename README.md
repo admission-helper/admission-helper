@@ -1,11 +1,35 @@
 # admission-helper
-VK bot for assistance in enrolling in P.G. Demidov University
+
+[English](github.com/yargtu/admission-helper/EN_README.md)  
 
 ВК-бот для помощи при поступлении в ЯрГУ
 
-**Для установки всех нужных модулей введи команду**
+## Установка
 
-Windows:
-    pip install -r requirements.txt  
-Linux/Mac:
-    pip3 install -r requirements.txt
+- Windows:  
+```console
+$ pip install -r requirements.txt  
+```
+- Linux/Mac:  
+```console
+$ pip3 install -r requirements.txt  
+```
+
+***
+## Использование
+
+- ВК-бот:  
+   * создайте файл ___admission-helper/config.py___
+   * получите токен vk.com/dev/access_token
+   * вставьте его
+
+```python
+token = 'API_KEY'  
+```
+
+- Без привязки к ВК  
+_chat_bot/main.py_
+
+```python
+start(response, model)
+```

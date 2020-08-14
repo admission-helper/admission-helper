@@ -11,4 +11,11 @@ from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 # from memo import *
 # from commands import *
 from config import token
-from chat_bot.main import get_model, start
+from chat_bot.main import get_model, chatbot_response
+
+vk_colors = {
+    'POSITIVE': VkKeyboardColor.POSITIVE,
+    'NEGATIVE': VkKeyboardColor.NEGATIVE,
+    'PRIMARY': VkKeyboardColor.PRIMARY,
+    'DEFAULT': VkKeyboardColor.DEFAULT
+    }

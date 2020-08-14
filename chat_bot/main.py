@@ -1,7 +1,9 @@
-from chat_bot.my_lib import *
+import sys
+sys.path.append('./chat_bot')
 
-from chat_bot.model import create_model
-from chat_bot.correct import correct_msg
+from my_lib import *
+from model import create_model
+from correct import correct_msg
 
 words = []
 classes = []
@@ -60,11 +62,11 @@ train_x = list(training[:,0])
 train_y = list(training[:,1])
 
 def get_model():
-    name = 'model/chatbot_model.h5'
-    if (os.path.exists('./' + name)):
-        return load_model(name)
+    model_name = 'model/chatbot_model.h5'
+    if (os.path.exists(f'./{model_name}')):
+        return load_model(model_name)
     else:
-        return create_model(name, train_x, train_y)
+        return create_model(model_name, train_x, train_y)
 
 def clean_up_sentence(sentence):
     sentence_words = nltk.word_tokenize(sentence)
@@ -112,28 +114,9 @@ def get_response(ints, intents_json):
     return result
 
 def chatbot_response(msg, model):
+    msg = correct_msg(msg)
     ints = predict_class(msg, model)
     res = get_response(ints, intents)
     return res
 
-
-
-# def start(model):
-#     while True:
-#         msg = input('You: ')
-#         msg = correct_msg(msg)
-
-#         if msg.lower() == "выход!":
-#             break
-
-#         res = chatbot_response(msg, model)
-#         print(res)
-
-def start(msg, model):
-    msg = correct_msg(msg)
-    res = chatbot_response(msg, model)
-    # print(res)
-    return res
-
-model = get_model()
-# start(model)
+# model = get_model()  #  для использования вне вк
