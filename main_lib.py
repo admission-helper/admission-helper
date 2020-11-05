@@ -17,5 +17,5 @@ vk_colors = {
     'POSITIVE': VkKeyboardColor.POSITIVE,
     'NEGATIVE': VkKeyboardColor.NEGATIVE,
     'PRIMARY': VkKeyboardColor.PRIMARY,
-    'DEFAULT': VkKeyboardColor.DEFAULT
+    'DEFAULT': VkKeyboardColor.SECONDARY
     }

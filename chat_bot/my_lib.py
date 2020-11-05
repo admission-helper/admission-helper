@@ -1,6 +1,7 @@
 
 import nltk
-# nltk.download('punkt')
+
+# nltk.download('punkt') uncomment for first time
 # nltk.download('wordnet')
 # nltk.download("stopwords")
 
