@@ -8,10 +8,16 @@
 
 - Windows:  
 ```console
+$ pip install virtualenv
+$ venv env
+$ source env/scripts/activate
 $ pip install -r requirements.txt  
 ```
 - Linux/Mac:  
 ```console
+$ pip3 install virtualenv
+$ venv env
+$ source env/bin/activate
 $ pip3 install -r requirements.txt  
 ```
 
@@ -25,11 +31,4 @@ $ pip3 install -r requirements.txt
 
 ```python
 token = 'API_KEY'  
-```
-
-- Без привязки к ВК  
-_chat_bot/main.py_
-
-```python
-start(response, model)
 ```
