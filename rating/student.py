@@ -1,6 +1,6 @@
-import pandas as pd   # pip install pandas
+import pandas as pd
 
-df = pd.read_excel(r'students.xlsx', sheet_name='Лист1')
+df = pd.read_excel(r'students.xlsx', sheet=0)
 # print(df)
 
 class Student:

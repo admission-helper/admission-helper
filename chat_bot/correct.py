@@ -1,12 +1,12 @@
 from pyaspeller import YandexSpeller
-import pymorphy2
+from pymorphy2 import MorphAnalyzer
 
-speller = YandexSpeller()
-morph = pymorphy2.MorphAnalyzer()
 
 def correct_msg(msg):
     cur_msg = msg
     try:
+        speller = YandexSpeller()
+        morph = MorphAnalyzer()
         changes = {change['word']: change['s'][0] for change in speller.spell(msg)}
         for word, suggestion in changes.items():
             msg = msg.replace(word, suggestion)

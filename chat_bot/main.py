@@ -118,5 +118,3 @@ def chatbot_response(msg, model):
     ints = predict_class(msg, model)
     res = get_response(ints, intents)
     return res
-
-# model = get_model()  #  для использования вне вк

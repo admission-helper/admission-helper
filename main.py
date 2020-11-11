@@ -1,6 +1,6 @@
 from main_lib import *
 
-def json_commands():
+def read_button_commands():
     with open("data/structure.json", "r", encoding="utf-8") as data_file:
         commands = json.load(data_file)
 
@@ -34,7 +34,7 @@ def response_search(json, response):
     return results
 
 def create_keyboard(keyboard, response):
-    commands = json_commands()
+    commands = read_button_commands()
     messages = response_search(commands, response)
     intents = []
 
@@ -59,7 +59,6 @@ def send_message(vk_session, id_type, id, message=None, attachment=None, keyboar
 
 def chat_start():
     vk_session = vk_api.VkApi(token=token)
-    session_api = vk_session.get_api()
     longpoll = VkLongPoll(vk_session)
 
     for event in longpoll.listen():
@@ -69,7 +68,7 @@ def chat_start():
             keyboard = VkKeyboard()
             keyboard = create_keyboard(keyboard, response)
 
-            commands = json_commands()
+            commands = read_button_commands()
             messages = response_search(commands, response)
 
             if event.from_user and not event.from_me:
