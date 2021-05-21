@@ -1,8 +1,10 @@
 # admission-helper
 
-[English](github.com/yargtu/admission-helper/EN_README.md)  
-
 ВК-бот для помощи при поступлении в ЯрГУ
+
+Синхронная версия на vk_api в chat_bot
+
+Начата работа над асинхронной версией в папке new_bot
 
 ## Установка
 
@@ -10,7 +12,7 @@
 ```console
 $ pip install virtualenv
 $ venv env
-$ source env/scripts/activate
+$ env/scripts/activate.ps1
 $ pip install -r requirements.txt  
 ```
 - Linux/Mac:  
