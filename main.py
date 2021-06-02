@@ -1,3 +1,4 @@
+from bd import add_user_req
 from os import pread
 from vkbottle.bot import Bot, Message
 from vkbottle import Keyboard, Text
@@ -78,8 +79,8 @@ async def calc_handler(message: Message) -> None:
 async def main_handler(message: Message) -> None:
     global subject
     if subject:
-        print({"exam": subject, "score": message.text, "id": message.id})
-        # запрос сюда
+        # print({"exam": subject, "score": message.text, "id": message.id})
+        add_user_req(user_id=message.id, exam_name=subject, ball=message.text)
         await subject_handler(message)
     else:
         KEYBOARD = (
