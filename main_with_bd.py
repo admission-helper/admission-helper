@@ -1,17 +1,28 @@
-from calc import possible_specialties
+from bd import actualize_status, add_user_req, get_all_directions, get_pass_directions
 from vkbottle.bot import Bot, Message
 from vkbottle import Keyboard, Text
+from vkbottle.tools.dev_tools import keyboard
+from vkbottle.tools.dev_tools.keyboard.action import Payload
 from config import TEST_TOKEN, DEMID_TOKEN
 import uvloop
 
-# bot = Bot(TEST_TOKEN)
-bot = Bot(DEMID_TOKEN)
+from config import database, user, password, host, port
+import asyncpg
+
+bot = Bot(TEST_TOKEN)
+# bot = Bot(DEMID_TOKEN)
 
 
-
+KEYBOARD = (
+    Keyboard(one_time=True)
+    .add(Text("Калькулятор ЕГЭ"))
+    .add(Text("О боте"))
+    .row()
+    .add(Text("Задать вопрос"))
+    .get_json()
+)
 
 subject = ''
-exams = []
 
 # @bot.on.message(payload={"subject": "subject"})
 # async def score_handler(message: Message) -> None:
@@ -23,25 +34,6 @@ exams = []
 
 #     await message.answer('Введите баллы', keyboard=keyboard)
 
-@bot.on.message(payload={"subject": "subject"})
-async def score_handler(message: Message) -> None:
-
-    global subject
-    exams.append(message.text)
-    await subject_handler(message)
-
-@bot.on.message(text=['О боте'])
-async def score_handler(message: Message) -> None:
-
-    ANSWER_TEXT = 'https://github.com/yargtu/admission-helper'
-
-    KEYBOARD = (
-            Keyboard(one_time=True)
-            .add(Text("Назад", {"subject": "back"}))
-            .get_json()
-        )
-
-    await message.answer(ANSWER_TEXT, keyboard=KEYBOARD)
 
 @bot.on.message(payload={"subject": "subject"})
 @bot.on.message(text=['Калькулятор ЕГЭ'])
@@ -49,7 +41,7 @@ async def subject_handler(message: Message) -> None:
 
     SUBJECTS = ("Математика", "Информатика", "История",
                 "Обществознание", "Физика", "Химия",
-                "Биология", "Литература")
+                "Биология", "Литература", "Русский язык")
 
     keyboard = Keyboard(one_time=True, inline=False)
 
@@ -84,24 +76,19 @@ async def back_subject_handler(message: Message) -> None:
 @bot.on.message(payload={"subject": "next"})
 async def calc_handler(message: Message) -> None:
 
-    subject_specialties = possible_specialties(exams)
-    ANSWER_TEXT = ''
-    for faculty, specialties in subject_specialties.items():
-        ANSWER_TEXT = '\n'.join((ANSWER_TEXT, f'{faculty}:\n'))
-        for specialty in specialties:
-            # ANSWER_TEXT = '\n'.join((specialty['Профиль'],))
-            ANSWER_TEXT += specialty['Специальность'] + '\n'
+    conn = await asyncpg.connect(user=user, password=password,
+                                 database=database, host=host)
 
-    exams.clear()
+    await actualize_status(conn, message.id)
 
-    KEYBOARD = (
-        Keyboard(one_time=True)
-        .add(Text("Калькулятор ЕГЭ"))
-        .add(Text("О боте"))
-        .row()
-        .add(Text("Задать вопрос"))
-        .get_json()
-    )
+    available_specialties = await get_pass_directions(conn, message.id)
+    subject_specialties = await get_all_directions(conn, message.id)
+
+    if available_specialties:
+        ANSWER_TEXT = f'Специальности с подходящими баллами: {available_specialties}'
+    else:
+        ANSWER_TEXT = 'Специальности с подходящими баллами не найдены'
+    ANSWER_TEXT.join(('\n', f', с вашими экзаменами: {subject_specialties}'))
     await message.answer(ANSWER_TEXT, keyboard=KEYBOARD)
 
 
@@ -111,6 +98,10 @@ async def main_handler(message: Message) -> None:
     if subject and message.text != 'Назад':
         # print({"exam": subject, "score": message.text, "id": message.id})
 
+        conn = await asyncpg.connect(user=user, password=password,
+                                     database=database, host=host)
+        await add_user_req(conn=conn, user_id=message.id, exam_name=subject, ball=message.text)
+        await actualize_status(conn, message.id)
         await subject_handler(message)
     else:
         ANSWER = 'Здесь вы можете задать свой вопрос'
@@ -121,6 +112,5 @@ async def main_handler(message: Message) -> None:
         )
         await message.answer(ANSWER, keyboard=KEYBOARD)
 
-if __name__ == '__main__':
-    uvloop.install()
-    bot.run_forever()
+uvloop.install()
+bot.run_forever()
