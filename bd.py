@@ -1,12 +1,3 @@
-from os import pread
-import psycopg2
-
-from config import database, user, password, host, port
-
-
-# conn = psycopg2.connect(database=database, user=user, password=password, host=host, port=port)
-# cursor = conn.cursor()
-
 async def add_user(conn, user_id):
     await conn.execute('''call bot.add_user('%s')''' %user_id)
     await conn.commit()
@@ -38,11 +29,10 @@ async def get_pass_directions(conn, user_id):
             having 
                 sum(tb.ball_qnt) > sum(tb.ball) 
         ''' % user_id)
-    await conn.close()
     return values
 
 async def get_all_directions(conn, user_id):
-    values = await conn.fetchall('''
+    values = await conn.fetch('''
     select distinct 
             dir_nm, 
             fac_nm
@@ -58,4 +48,16 @@ async def get_all_directions(conn, user_id):
             where 
                 u.user_vk_id = '%s') tb
     ''' % user_id)
+    await conn.close()
     return values
+
+async def get_all_directions(conn, user_id):
+
+    res = await conn.fetch('''select * from bot.get_all_directions('%s');''' % user_id)
+
+    return res
+
+
+async def actualize_status(conn, user_id):
+    await conn.execute('''call bot.status('%s')''' % user_id)
+    

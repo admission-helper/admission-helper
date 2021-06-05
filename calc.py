@@ -1,8 +1,5 @@
 import pandas as pd
 
-file_path = 'data/specialties.xlsx'
-
-bachelor = pd.read_excel(file_path, sheet_name='Бакалавриат и специалитет')
 
 def faculties_by_degree(degree):
     return degree['Наименование факультета'].dropna()
@@ -27,12 +24,38 @@ def choose_specialty(fac_specialties, specialty):
 
 
 
-specialties = specialties_by_faculty('Математический', bachelor)
-faculties = faculties_by_degree(bachelor)
-a = {}
-faculties = [faculty.replace('\xa0','') for faculty in set(faculties)]
-for faculty in faculties:
-    a[faculty] = specialties_by_faculty(faculty, bachelor)
+# specialties = specialties_by_faculty('Математический', bachelor)
+# faculties = faculties_by_degree(bachelor)
+# a = {}
+# faculties = [faculty.replace('\xa0','') for faculty in set(faculties)]
+# for faculty in faculties:
+#     a[faculty] = specialties_by_faculty(faculty, bachelor)
 
-print(a)
+# print(a)
 
+
+
+# print(bachelor['Наименование факультета'].unique())
+# print(bachelor['Наименование факультета'])
+
+
+# a = dict.fromkeys(('Биология', 'Химия'))
+# print(a)
+def possible_specialties(exams) -> dict:
+    specialties = {}
+    file_path = 'data/specialties.csv'
+    bachelor = pd.read_csv(file_path)
+    poss_exams = (bachelor['Вступительное испытание 1'], 
+                bachelor['Вступительное испытание 2_1'], 
+                bachelor['Вступительное испытание 2_2'])
+    for i, item in enumerate(zip(*poss_exams)):
+        if item[0] in exams:
+            if item[1] in exams or item[2] in exams:
+                specialties[bachelor['Наименование факультета'][i]] = specialties.get(bachelor['Наименование факультета'][i], [])
+                specialties[bachelor['Наименование факультета'][i]].append({
+                           'Специальность': bachelor['Наименование направления подготовки'][i],
+                           'Профиль': bachelor['Наименование направленности (профиля)'][i]})
+    return specialties
+
+# print(bachelor.loc[bachelor['Вступительное испытание 1'] == 'Математика'].values)
+# dict from keys
